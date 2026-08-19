@@ -1,0 +1,86 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches and local data
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables & secrets
+.env
+*.env
+!.env.example
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+database.db
+
+# Qdrant Vector Storage
+qdrant_storage/
+qdrant_data/
+.qdrant/
+
+# Downloaded NLP models & datasets
+nltk_data/
+spacy_models/
+huggingface/
+transformers/
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS Generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and temporary files
+*.log
+logs/
+scratch/
+tmp/
+temp/
