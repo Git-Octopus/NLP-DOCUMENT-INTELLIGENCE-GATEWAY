@@ -5,33 +5,98 @@ Provides spaCy-driven linguistic processing including lemmatization,
 Part-of-Speech (POS) tagging, dependency parsing, and noun chunk extraction.
 """
 
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
+import spacy
+
+_nlp_model = None
+
+def get_spacy_model():
+    """
+    Loads en_core_web_sm model lazily as a cached singleton module.
+    """
+    global _nlp_model
+    if _nlp_model is None:
+        try:
+            _nlp_model = spacy.load("en_core_web_sm")
+        except OSError:
+            try:
+                from spacy.cli import download
+                download("en_core_web_sm")
+                _nlp_model = spacy.load("en_core_web_sm")
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to load or download spaCy model 'en_core_web_sm': {e}"
+                )
+    return _nlp_model
+
+def analyze_linguistics(text: str) -> Dict[str, Any]:
+    """
+    Analyzes input text using spaCy and returns a comprehensive dictionary containing:
+    - lemmas: List of lowercased lemmas (excluding punctuation/spaces).
+    - pos_tags: List of tuples (token, coarse_pos, fine_pos).
+    - dependencies: List of dicts {"token": ..., "dep": ..., "head": ...}.
+    - noun_chunks: List of extracted noun phrase strings.
+    """
+    if not text or not text.strip():
+        return {
+            "lemmas": [],
+            "pos_tags": [],
+            "dependencies": [],
+            "noun_chunks": []
+        }
+        
+    nlp = get_spacy_model()
+    doc = nlp(text)
+    
+    lemmas = [
+        token.lemma_.lower() for token in doc 
+        if not token.is_punct and not token.is_space
+    ]
+    
+    pos_tags = [
+        (token.text, token.pos_, token.tag_) for token in doc
+    ]
+    
+    dependencies = [
+        {
+            "token": token.text,
+            "dep": token.dep_,
+            "head": token.head.text
+        }
+        for token in doc
+    ]
+    
+    noun_chunks = [
+        chunk.text.strip() for chunk in doc.noun_chunks
+    ]
+    
+    return {
+        "lemmas": lemmas,
+        "pos_tags": pos_tags,
+        "dependencies": dependencies,
+        "noun_chunks": noun_chunks
+    }
 
 def lemmatize_text(text: str) -> List[str]:
     """
-    Lemmatizes text tokens using spaCy dictionary lookup and POS context.
-    Unlike stemming, produces real dictionary lemmas (e.g. 'better' -> 'good', 'was' -> 'be').
+    Returns list of lemmatized text tokens.
     """
-    pass
+    return analyze_linguistics(text)["lemmas"]
 
 def pos_tag_text(text: str) -> List[Tuple[str, str, str]]:
     """
-    Performs Part-of-Speech tagging on input text.
-    Returns list of tuples: (token_text, coarse_pos_tag, fine_pos_tag).
-    E.g. [('refund', 'NOUN', 'NN'), ('requested', 'VERB', 'VBD')]
+    Performs Part-of-Speech tagging. Returns list of tuples: (token, coarse_pos, fine_pos).
     """
-    pass
+    return analyze_linguistics(text)["pos_tags"]
 
 def extract_noun_chunks(text: str) -> List[str]:
     """
-    Extracts base noun phrases / noun chunks using spaCy dependency parse trees.
-    Useful for domain phrase extraction (e.g. 'billing issue', 'credit card charge').
+    Extracts noun chunks / noun phrases.
     """
-    pass
+    return analyze_linguistics(text)["noun_chunks"]
 
 def extract_dependency_features(text: str) -> List[Dict[str, Any]]:
     """
-    Extracts syntactic dependency triples (head, relation, child) for key phrase analysis
-    and evidence sentence justification.
+    Extracts dependency tree triples/dicts.
     """
-    pass
+    return analyze_linguistics(text)["dependencies"]
