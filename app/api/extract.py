@@ -12,7 +12,9 @@ router = APIRouter(tags=["Document Extraction"])
     description="Extracts raw text and metadata from uploaded PDF or DOCX support documents.",
 )
 async def extract_document(
-    file: UploadFile = File(..., description="Document file to extract text from (.pdf or .docx)")
+    file: UploadFile = File(
+        ..., description="Document file to extract text from (.pdf or .docx)"
+    )
 ) -> ExtractResponse:
     """
     Day 2 skeleton endpoint. Returns schema-compliant dummy extracted text.

@@ -26,7 +26,7 @@ async def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
     dummy_key_points = [
         "Persistent service access errors reported",
         "Initial customer troubleshooting attempts unsuccessful",
-        "Action required by tier-2 support team"
+        "Action required by tier-2 support team",
     ]
 
     return SummarizeResponse(

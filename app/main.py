@@ -14,7 +14,9 @@ from app.api.summarize import router as summarize_router
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown routines."""
     # Startup tasks
-    print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} (Debug: {settings.DEBUG})")
+    print(
+        f"Starting {settings.APP_NAME} v{settings.APP_VERSION} (Debug: {settings.DEBUG})"
+    )
     yield
     # Shutdown tasks
     print(f"Shutting down {settings.APP_NAME}")
@@ -96,6 +98,7 @@ async def health_check() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
