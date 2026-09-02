@@ -44,7 +44,9 @@ def test_schema_topic_match():
 
 
 def test_schema_intent_match():
-    intent = IntentMatch(intent="cancel_subscription", confidence=0.75, resolved_by="rules")
+    intent = IntentMatch(
+        intent="cancel_subscription", confidence=0.75, resolved_by="rules"
+    )
     assert intent.intent == "cancel_subscription"
     assert intent.confidence == 0.75
 
@@ -62,14 +64,18 @@ def test_schema_sentiment_analysis():
 
 
 def test_schema_duplicate_check():
-    dup = DuplicateCheck(is_duplicate=True, matched_message_id="msg_999", similarity_score=0.95)
+    dup = DuplicateCheck(
+        is_duplicate=True, matched_message_id="msg_999", similarity_score=0.95
+    )
     assert dup.is_duplicate is True
     assert dup.matched_message_id == "msg_999"
     assert dup.similarity_score == 0.95
 
 
 def test_schema_analyze_request_and_response():
-    req = AnalyzeRequest(text="Account locked after failed login attempts", metadata={"channel": "chat"})
+    req = AnalyzeRequest(
+        text="Account locked after failed login attempts", metadata={"channel": "chat"}
+    )
     assert len(req.text) >= 3
     assert req.metadata["channel"] == "chat"
 
@@ -78,10 +84,10 @@ def test_schema_analyze_request_and_response():
         original_text=req.text,
         cleaned_text="account locked after failed login attempts",
         topic=TopicMatch(topic="Account Access", confidence=0.91, resolved_by="qdrant"),
-        intent=IntentMatch(intent="unlock_account", confidence=0.87, resolved_by="rules"),
-        entities=[
-            ExtractedEntity(text="locked", label="STATUS", source="regex")
-        ],
+        intent=IntentMatch(
+            intent="unlock_account", confidence=0.87, resolved_by="rules"
+        ),
+        entities=[ExtractedEntity(text="locked", label="STATUS", source="regex")],
         keywords=["account", "locked", "login"],
         sentiment=SentimentAnalysis(sentiment=SentimentEnum.NEGATIVE, score=-0.5),
         evidence_sentences=["Account locked after failed login attempts"],
@@ -117,7 +123,9 @@ def test_schema_extract_response():
 
 
 def test_schema_summarize():
-    sum_req = SummarizeRequest(text="This is a test message that has more than ten characters.", max_length=100)
+    sum_req = SummarizeRequest(
+        text="This is a test message that has more than ten characters.", max_length=100
+    )
     assert sum_req.max_length == 100
 
     sum_res = SummarizeResponse(

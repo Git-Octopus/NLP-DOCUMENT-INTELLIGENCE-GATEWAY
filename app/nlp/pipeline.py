@@ -12,6 +12,7 @@ from app.nlp.linguistic import analyze_linguistics
 from app.nlp.tfidf import extract_keywords
 from app.nlp.ner import extract_all_entities
 
+
 def run_local_nlp_pipeline(text: str) -> Dict[str, Any]:
     """
     Executes local text processing and traditional ML tasks:
@@ -20,7 +21,7 @@ def run_local_nlp_pipeline(text: str) -> Dict[str, Any]:
     - spaCy linguistic analysis (lemmas, POS tags, noun chunks)
     - TF-IDF keyword extraction
     - Combined rule-based & spaCy entity recognition
-    
+
     Output schema strictly conforms to:
     {
         "cleaned_text": str,
@@ -42,29 +43,25 @@ def run_local_nlp_pipeline(text: str) -> Dict[str, Any]:
             "pos_tags": [],
             "noun_chunks": [],
             "keywords": [],
-            "entities": []
+            "entities": [],
         }
-        
+
     cleaned_text = clean_text(text)
     tokens = tokenize_words(cleaned_text, remove_punct=True)
     sentences = tokenize_sentences(cleaned_text)
-    
+
     linguistic_res = analyze_linguistics(cleaned_text)
     lemmas = linguistic_res["lemmas"]
-    
+
     formatted_pos_tags = [
-        {
-            "token": tag_tuple[0],
-            "coarse_pos": tag_tuple[1],
-            "fine_pos": tag_tuple[2]
-        }
+        {"token": tag_tuple[0], "coarse_pos": tag_tuple[1], "fine_pos": tag_tuple[2]}
         for tag_tuple in linguistic_res["pos_tags"]
     ]
-    
+
     noun_chunks = linguistic_res["noun_chunks"]
     keywords = extract_keywords(cleaned_text, top_n=5)
     entities = extract_all_entities(text)
-    
+
     return {
         "cleaned_text": cleaned_text,
         "tokens": tokens,
@@ -73,5 +70,5 @@ def run_local_nlp_pipeline(text: str) -> Dict[str, Any]:
         "pos_tags": formatted_pos_tags,
         "noun_chunks": noun_chunks,
         "keywords": keywords,
-        "entities": entities
+        "entities": entities,
     }

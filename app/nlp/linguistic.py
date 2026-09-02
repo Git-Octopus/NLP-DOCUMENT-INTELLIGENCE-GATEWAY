@@ -10,6 +10,7 @@ import spacy
 
 _nlp_model = None
 
+
 def get_spacy_model():
     """
     Loads en_core_web_sm model lazily as a cached singleton module.
@@ -21,6 +22,7 @@ def get_spacy_model():
         except OSError:
             try:
                 from spacy.cli import download
+
                 download("en_core_web_sm")
                 _nlp_model = spacy.load("en_core_web_sm")
             except Exception as e:
@@ -28,6 +30,7 @@ def get_spacy_model():
                     f"Failed to load or download spaCy model 'en_core_web_sm': {e}"
                 )
     return _nlp_model
+
 
 def analyze_linguistics(text: str) -> Dict[str, Any]:
     """
@@ -38,44 +41,33 @@ def analyze_linguistics(text: str) -> Dict[str, Any]:
     - noun_chunks: List of extracted noun phrase strings.
     """
     if not text or not text.strip():
-        return {
-            "lemmas": [],
-            "pos_tags": [],
-            "dependencies": [],
-            "noun_chunks": []
-        }
-        
+        return {"lemmas": [], "pos_tags": [], "dependencies": [], "noun_chunks": []}
+
     nlp = get_spacy_model()
     doc = nlp(text)
-    
+
     lemmas = [
-        token.lemma_.lower() for token in doc 
+        token.lemma_.lower()
+        for token in doc
         if not token.is_punct and not token.is_space
     ]
-    
-    pos_tags = [
-        (token.text, token.pos_, token.tag_) for token in doc
-    ]
-    
+
+    pos_tags = [(token.text, token.pos_, token.tag_) for token in doc]
+
     dependencies = [
-        {
-            "token": token.text,
-            "dep": token.dep_,
-            "head": token.head.text
-        }
+        {"token": token.text, "dep": token.dep_, "head": token.head.text}
         for token in doc
     ]
-    
-    noun_chunks = [
-        chunk.text.strip() for chunk in doc.noun_chunks
-    ]
-    
+
+    noun_chunks = [chunk.text.strip() for chunk in doc.noun_chunks]
+
     return {
         "lemmas": lemmas,
         "pos_tags": pos_tags,
         "dependencies": dependencies,
-        "noun_chunks": noun_chunks
+        "noun_chunks": noun_chunks,
     }
+
 
 def lemmatize_text(text: str) -> List[str]:
     """
@@ -83,17 +75,20 @@ def lemmatize_text(text: str) -> List[str]:
     """
     return analyze_linguistics(text)["lemmas"]
 
+
 def pos_tag_text(text: str) -> List[Tuple[str, str, str]]:
     """
     Performs Part-of-Speech tagging. Returns list of tuples: (token, coarse_pos, fine_pos).
     """
     return analyze_linguistics(text)["pos_tags"]
 
+
 def extract_noun_chunks(text: str) -> List[str]:
     """
     Extracts noun chunks / noun phrases.
     """
     return analyze_linguistics(text)["noun_chunks"]
+
 
 def extract_dependency_features(text: str) -> List[Dict[str, Any]]:
     """

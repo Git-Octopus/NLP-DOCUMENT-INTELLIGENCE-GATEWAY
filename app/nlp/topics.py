@@ -7,12 +7,14 @@ topics and intents.
 
 from typing import Dict, Any
 
+
 def match_topic(text: str, confidence_threshold: float = 0.60) -> Dict[str, Any]:
     """
     Determines document topic matching TopicMatch schema:
     {'topic': str, 'confidence': float, 'resolved_by': 'qdrant' | 'llm_fallback'}
     """
     pass
+
 
 def match_intent(text: str, confidence_threshold: float = 0.60) -> Dict[str, Any]:
     """
