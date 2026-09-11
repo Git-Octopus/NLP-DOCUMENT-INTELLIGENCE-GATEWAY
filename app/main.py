@@ -17,6 +17,12 @@ async def lifespan(app: FastAPI):
     print(
         f"Starting {settings.APP_NAME} v{settings.APP_VERSION} (Debug: {settings.DEBUG})"
     )
+    try:
+        from app.nlp.topics import seed_topics_to_vector_store
+        count = seed_topics_to_vector_store()
+        print(f"Seeded {count} topic vectors into Qdrant store.")
+    except Exception as e:
+        print(f"Vector store startup initialization notice: {e}")
     yield
     # Shutdown tasks
     print(f"Shutting down {settings.APP_NAME}")
