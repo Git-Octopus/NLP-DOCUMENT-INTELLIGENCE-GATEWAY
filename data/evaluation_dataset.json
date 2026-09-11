@@ -1,0 +1,253 @@
+[
+  {
+    "id": 1,
+    "text": "My Visa card was charged $49.99 twice for order #ORD-8812 on 2026-03-01.",
+    "expected_topic": "payment",
+    "expected_intent": "duplicate_payment",
+    "expected_entities": [
+      {"label": "MONEY", "text": "$49.99"},
+      {"label": "ORDER_ID", "text": "#ORD-8812"},
+      {"label": "DATE", "text": "2026-03-01"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 2,
+    "text": "The payment failed at checkout but my bank account shows money deducted.",
+    "expected_topic": "payment",
+    "expected_intent": "failed_transaction",
+    "expected_entities": [],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 3,
+    "text": "Where is my refund for returned item on order #ORD-1092? It's been 5 days.",
+    "expected_topic": "refund",
+    "expected_intent": "refund_status_inquiry",
+    "expected_entities": [
+      {"label": "ORDER_ID", "text": "#ORD-1092"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 4,
+    "text": "Please initiate a full refund of $120.00 to john.doe@example.com immediately.",
+    "expected_topic": "refund",
+    "expected_intent": "request_refund",
+    "expected_entities": [
+      {"label": "MONEY", "text": "$120.00"},
+      {"label": "EMAIL", "text": "john.doe@example.com"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 5,
+    "text": "There is a billing discrepancy on invoice #INV-4412 with extra 18% tax added.",
+    "expected_topic": "invoice",
+    "expected_intent": "incorrect_invoice_amount",
+    "expected_entities": [
+      {"label": "INVOICE_ID", "text": "#INV-4412"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 6,
+    "text": "Can you please email a copy of our company tax invoice for reimbursement?",
+    "expected_topic": "invoice",
+    "expected_intent": "request_invoice_copy",
+    "expected_entities": [],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 7,
+    "text": "My account is locked and I am not receiving the 2FA SMS code on +1 (555) 234-5678.",
+    "expected_topic": "account_access",
+    "expected_intent": "two_factor_auth_failure",
+    "expected_entities": [
+      {"label": "PHONE", "text": "+1 (555) 234-5678"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 8,
+    "text": "Identity verification failed when uploading my passport. Please unlock my account.",
+    "expected_topic": "account_access",
+    "expected_intent": "locked_account",
+    "expected_entities": [],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 9,
+    "text": "I forgot my password and the reset link sent to admin@techcorp.io has expired.",
+    "expected_topic": "password_reset",
+    "expected_intent": "expired_reset_link",
+    "expected_entities": [
+      {"label": "EMAIL", "text": "admin@techcorp.io"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 10,
+    "text": "How do I reset my security PIN and change my portal login credentials?",
+    "expected_topic": "password_reset",
+    "expected_intent": "forgot_password",
+    "expected_entities": [],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 11,
+    "text": "Where is my delivery? Package TRK-99214 was supposed to arrive by 2026-02-28.",
+    "expected_topic": "delivery",
+    "expected_intent": "track_order",
+    "expected_entities": [
+      {"label": "TRACKING_NUMBER", "text": "TRK-99214"},
+      {"label": "DATE", "text": "2026-02-28"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 12,
+    "text": "The delivery box arrived severely damaged with broken merchandise inside.",
+    "expected_topic": "delivery",
+    "expected_intent": "damaged_parcel",
+    "expected_entities": [],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 13,
+    "text": "Please cancel my order #ORD-3321 before it gets shipped out from warehouse.",
+    "expected_topic": "cancellation",
+    "expected_intent": "cancel_order",
+    "expected_entities": [
+      {"label": "ORDER_ID", "text": "#ORD-3321"}
+    ],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 14,
+    "text": "I placed ticket TKT-9941 by mistake, please stop service and cancel it.",
+    "expected_topic": "cancellation",
+    "expected_intent": "cancel_order",
+    "expected_entities": [
+      {"label": "TICKET_ID", "text": "TKT-9941"}
+    ],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 15,
+    "text": "The web application crashes with ERR-502 whenever I upload a document.",
+    "expected_topic": "technical_issue",
+    "expected_intent": "app_crash",
+    "expected_entities": [
+      {"label": "ERROR_CODE", "text": "ERR-502"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 16,
+    "text": "I am getting HTTP 500 internal server error on the dashboard page.",
+    "expected_topic": "technical_issue",
+    "expected_intent": "app_crash",
+    "expected_entities": [
+      {"label": "ERROR_CODE", "text": "HTTP 500"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "standard"
+  },
+  {
+    "id": 17,
+    "text": "I want to upgrade my subscription to the annual Pro plan for $299.00.",
+    "expected_topic": "subscription",
+    "expected_intent": "upgrade_plan",
+    "expected_entities": [
+      {"label": "MONEY", "text": "$299.00"}
+    ],
+    "expected_sentiment": "positive",
+    "difficulty": "standard"
+  },
+  {
+    "id": 18,
+    "text": "Please turn off auto-renewal for my monthly membership starting next cycle.",
+    "expected_topic": "subscription",
+    "expected_intent": "cancel_subscription",
+    "expected_entities": [],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 19,
+    "text": "What are your customer support telephone hours on public holidays?",
+    "expected_topic": "general_support",
+    "expected_intent": "business_hours_inquiry",
+    "expected_entities": [],
+    "expected_sentiment": "neutral",
+    "difficulty": "standard"
+  },
+  {
+    "id": 20,
+    "text": "Can a human agent please call me back at +1-555-883-9921? Thank you for your help.",
+    "expected_topic": "general_support",
+    "expected_intent": "speak_to_agent",
+    "expected_entities": [
+      {"label": "PHONE", "text": "+1-555-883-9921"}
+    ],
+    "expected_sentiment": "positive",
+    "difficulty": "standard"
+  },
+  {
+    "id": 21,
+    "text": "card was taken 2 times for ordr 55192 money gone pls help!",
+    "expected_topic": "payment",
+    "expected_intent": "duplicate_payment",
+    "expected_entities": [],
+    "expected_sentiment": "negative",
+    "difficulty": "edge_case"
+  },
+  {
+    "id": 22,
+    "text": "cant login, white screen on Chrome browser.",
+    "expected_topic": "technical_issue",
+    "expected_intent": "app_crash",
+    "expected_entities": [],
+    "expected_sentiment": "negative",
+    "difficulty": "edge_case"
+  },
+  {
+    "id": 23,
+    "text": "Thank you so much, your team resolved my ticket TKT-8812 in under 10 minutes! Excellent service.",
+    "expected_topic": "general_support",
+    "expected_intent": "speak_to_agent",
+    "expected_entities": [
+      {"label": "TICKET_ID", "text": "TKT-8812"}
+    ],
+    "expected_sentiment": "positive",
+    "difficulty": "standard"
+  },
+  {
+    "id": 24,
+    "text": "Package TRK-10029 is missing items and invoice shows wrong total of €85.00.",
+    "expected_topic": "delivery",
+    "expected_intent": "damaged_parcel",
+    "expected_entities": [
+      {"label": "TRACKING_NUMBER", "text": "TRK-10029"},
+      {"label": "MONEY", "text": "€85.00"}
+    ],
+    "expected_sentiment": "negative",
+    "difficulty": "edge_case"
+  }
+]

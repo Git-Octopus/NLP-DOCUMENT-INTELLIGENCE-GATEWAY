@@ -123,12 +123,16 @@ def normalize_text(
     return cleaned
 
 
-def tokenize_sentences(text: str) -> List[str]:
+def tokenize_sentences(text: str, backend: str = "nltk") -> List[str]:
     """
-    Sentence segmentation using NLTK sent_tokenize with regex fallback.
+    Sentence segmentation using NLTK or spaCy with regex fallback.
     """
     if not text or not text.strip():
         return []
+
+    if backend.lower() == "spacy":
+        return tokenize_sentences_spacy(text)
+
     try:
         sentences = sent_tokenize(text)
         return [s.strip() for s in sentences if s.strip()]
@@ -138,15 +142,33 @@ def tokenize_sentences(text: str) -> List[str]:
         return [s.strip() for s in sentences if s.strip()]
 
 
+def tokenize_sentences_spacy(text: str) -> List[str]:
+    """
+    Sentence segmentation using spaCy.
+    """
+    if not text or not text.strip():
+        return []
+    try:
+        from app.nlp.linguistic import get_spacy_model
+        nlp = get_spacy_model()
+        doc = nlp(text)
+        return [s.text.strip() for s in doc.sents if s.text.strip()]
+    except Exception:
+        return tokenize_sentences(text, backend="nltk")
+
+
 def tokenize_words(
-    text: str, remove_punct: bool = True, return_offsets: bool = False
+    text: str, remove_punct: bool = True, return_offsets: bool = False, backend: str = "nltk"
 ) -> Union[List[str], List[Dict[str, Any]]]:
     """
-    Word tokenization using NLTK word_tokenize with regex fallback.
+    Word tokenization using NLTK or spaCy with regex fallback.
     Optionally strips punctuation tokens and returns token character offsets.
     """
     if not text or not text.strip():
         return []
+
+    if backend.lower() == "spacy" and not return_offsets:
+        return tokenize_words_spacy(text, remove_punct=remove_punct)
 
     if return_offsets:
         pattern = re.compile(r"\w+|[^\w\s]")
@@ -176,14 +198,58 @@ def tokenize_words(
     return tokens
 
 
-def remove_stopwords(
+def tokenize_words_spacy(text: str, remove_punct: bool = True) -> List[str]:
+    """
+    Word tokenization using spaCy.
+    """
+    if not text or not text.strip():
+        return []
+    try:
+        from app.nlp.linguistic import get_spacy_model
+        nlp = get_spacy_model()
+        doc = nlp(text)
+        tokens = [
+            t.text for t in doc
+            if not (remove_punct and (t.is_punct or not any(c.isalnum() for c in t.text)))
+            and not t.is_space
+        ]
+        return tokens
+    except Exception:
+        return tokenize_words(text, remove_punct=remove_punct, backend="nltk")
+
+
+def remove_stopwords_spacy(
     tokens: List[str], custom_stopwords: Optional[List[str]] = None
 ) -> List[str]:
     """
-    Removes standard English stopwords (NLTK) with optional custom domain additions.
+    Removes standard English stopwords using spaCy's stopword list.
     """
     if not tokens:
         return []
+    try:
+        from app.nlp.linguistic import get_spacy_model
+        nlp = get_spacy_model()
+        stop_words = set(nlp.Defaults.stop_words)
+    except Exception:
+        stop_words = set()
+
+    if custom_stopwords:
+        stop_words.update(s.lower() for s in custom_stopwords)
+
+    return [t for t in tokens if t.lower() not in stop_words]
+
+
+def remove_stopwords(
+    tokens: List[str], custom_stopwords: Optional[List[str]] = None, backend: str = "nltk"
+) -> List[str]:
+    """
+    Removes standard English stopwords (NLTK or spaCy) with optional custom domain additions.
+    """
+    if not tokens:
+        return []
+
+    if backend.lower() == "spacy":
+        return remove_stopwords_spacy(tokens, custom_stopwords=custom_stopwords)
 
     try:
         stop_words = set(stopwords.words("english"))
