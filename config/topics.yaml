@@ -1,0 +1,183 @@
+# ==============================================================================
+# NLP Document Intelligence Gateway — Predefined Topic Taxonomy
+# Controlled 10-Topic Taxonomy for Customer Support Domain
+# ==============================================================================
+
+version: "1.0.0"
+domain: "customer_support"
+
+topics:
+  payment:
+    id: "payment"
+    name: "Payment"
+    description: "Problems involving payments, charges, credit/debit card transactions, checkout failures, or duplicate charges."
+    intents:
+      - "duplicate_payment"
+      - "failed_transaction"
+      - "payment_method_issue"
+      - "unauthorized_charge"
+      - "checkout_error"
+    examples:
+      - "My card was charged twice for the same order."
+      - "The payment failed at checkout but money was deducted from my bank."
+      - "I am getting a payment processing error when trying to use my Visa card."
+      - "Why was my debit card charged without an OTP?"
+      - "Payment went through but the order status still shows unpaid."
+      - "My credit card was declined during checkout."
+
+  refund:
+    id: "refund"
+    name: "Billing & Refunds"
+    description: "Requests, inquiries, or disputes related to billing, invoices, refunds, returned money, charge reversals, or duplicate charges."
+    intents:
+      - "request_refund"
+      - "refund_status_inquiry"
+      - "partial_refund_dispute"
+      - "delayed_refund"
+    examples:
+      - "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
+      - "I requested a refund three days ago but have not received the money."
+      - "Where is my refund for the cancelled order?"
+      - "I want my money back for the defective item I returned."
+      - "How long does it take for a refund to reflect in my bank account?"
+      - "The refund amount received is less than what I originally paid."
+      - "Please initiate a refund for order #ORD-9821."
+
+  invoice:
+    id: "invoice"
+    name: "Invoice & Billing"
+    description: "Inquiries regarding invoice accuracy, billing receipts, tax computations, GST numbers, or discrepancy in billed amounts."
+    intents:
+      - "incorrect_invoice_amount"
+      - "request_invoice_copy"
+      - "tax_gst_update"
+      - "billing_address_change"
+    examples:
+      - "The amount on my monthly invoice is incorrect."
+      - "Can you send a tax invoice with our company GST number?"
+      - "There is an extra surcharge on my bill that I did not authorize."
+      - "I need a copy of the invoice for order #INV-4412 for reimbursement."
+      - "Why is sales tax added twice to my invoice?"
+      - "Please update the billing address on my last receipt."
+
+  account_access:
+    id: "account_access"
+    name: "Account Access"
+    description: "Difficulties logging in, locked accounts, two-factor authentication (2FA) troubles, identity verification, or deactivated profiles."
+    intents:
+      - "locked_account"
+      - "two_factor_auth_failure"
+      - "kyc_verification_issue"
+      - "account_reactivation"
+    examples:
+      - "I cannot access my account because it is temporarily locked."
+      - "I am not receiving the 2FA verification code on my registered mobile number."
+      - "My account was suspended without any explanation."
+      - "I cannot log in to my portal after updating my phone number."
+      - "Identity verification failed when uploading my government ID."
+      - "Please unlock my user account as soon as possible."
+
+  password_reset:
+    id: "password_reset"
+    name: "Password Reset"
+    description: "Requests for forgotten passwords, expired password reset links, credential updates, or PIN resets."
+    intents:
+      - "forgot_password"
+      - "expired_reset_link"
+      - "change_password"
+      - "pin_reset"
+    examples:
+      - "I forgot my password and cannot log in to the portal."
+      - "The password reset link sent to my email has already expired."
+      - "How do I reset my security PIN for authentication?"
+      - "I clicked forgot password but never received the recovery email."
+      - "I want to change my current account password."
+      - "Reset password page is giving an invalid token error."
+
+  delivery:
+    id: "delivery"
+    name: "Delivery & Shipping"
+    description: "Problems involving shipment tracking, delayed packages, damaged parcels, incorrect delivery addresses, or missing items."
+    intents:
+      - "track_order"
+      - "delayed_delivery"
+      - "damaged_parcel"
+      - "wrong_delivery_address"
+      - "missing_item"
+    examples:
+      - "My order has not arrived yet and tracking hasn't updated for four days."
+      - "The package was marked as delivered but I did not receive anything."
+      - "My parcel arrived damaged with broken contents inside."
+      - "Can I change the delivery address for shipment #TRK-8821?"
+      - "One item was missing from the package delivered yesterday."
+      - "Where is my delivery? Expected delivery date was yesterday."
+
+  cancellation:
+    id: "cancellation"
+    name: "Cancellation"
+    description: "Requests to cancel placed orders, appointments, active services, or pre-orders before shipment or dispatch."
+    intents:
+      - "cancel_order"
+      - "cancel_booking"
+      - "stop_service"
+    examples:
+      - "Please cancel my order #ORD-4491 before it gets shipped."
+      - "I placed an order by mistake and want to cancel it immediately."
+      - "How do I cancel my appointment scheduled for tomorrow?"
+      - "I want to cancel the pre-order I submitted yesterday."
+      - "The cancellation button on the website is not working for my order."
+      - "Cancel my service request #TKT-3129."
+
+  technical_issue:
+    id: "technical_issue"
+    name: "Technical Issue"
+    description: "Software bugs, application crashes, web platform errors, file upload failures, API timeouts, or system glitches."
+    intents:
+      - "app_crash"
+      - "file_upload_error"
+      - "api_timeout"
+      - "ui_bug"
+      - "browser_compatibility"
+    examples:
+      - "The mobile app crashes every time I click on the checkout button."
+      - "The application shows a 500 internal server error when uploading a PDF."
+      - "I am seeing a blank white screen after logging in on Chrome."
+      - "The search bar is unresponsive and freezes my browser."
+      - "File upload fails with 'unexpected server error' code ERR-502."
+      - "There is a glitch in the dashboard where data does not load."
+
+  subscription:
+    id: "subscription"
+    name: "Subscription & Plans"
+    description: "Questions or requests regarding subscription tiers, plan upgrades or downgrades, auto-renewal settings, or license keys."
+    intents:
+      - "upgrade_plan"
+      - "downgrade_plan"
+      - "cancel_subscription"
+      - "auto_renewal_toggle"
+      - "license_inquiry"
+    examples:
+      - "I want to upgrade my subscription from the Basic tier to Pro."
+      - "How do I turn off automatic renewal for my annual membership?"
+      - "I would like to downgrade my plan starting next month."
+      - "My subscription was renewed automatically even though I turned it off."
+      - "Can you explain the difference between the Business and Enterprise plans?"
+      - "Where can I view my active software license keys?"
+
+  general_support:
+    id: "general_support"
+    name: "General Support"
+    description: "General questions about company policies, operating hours, branch locations, feedback, or requesting to speak with an agent."
+    intents:
+      - "speak_to_agent"
+      - "business_hours_inquiry"
+      - "policy_inquiry"
+      - "feedback_submission"
+      - "contact_details"
+    examples:
+      - "I need help with my account and want to speak with a human support agent."
+      - "What are your customer service operational hours on weekends?"
+      - "Where is your nearest physical branch located?"
+      - "Can someone from your support team call me back regarding my query?"
+      - "I have general feedback about my experience with your service."
+      - "How can I contact customer care by phone?"
