@@ -18,25 +18,29 @@ from app.schemas.analysis import (
     DuplicateCheck,
 )
 
+
 @pytest.fixture(scope="function")
 def db_session():
     """
     Creates an in-memory SQLite database session for testing.
     Ensures isolated state per test function.
     """
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     # Create all tables in memory
     Base.metadata.create_all(bind=engine)
-    
+
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
-        
+
+
 def test_create_and_retrieve_analysis(db_session):
     """Verify that a full AnalyzeResponse object is correctly saved and retrieved from SQLite."""
     dummy_response = AnalyzeResponse(
@@ -81,7 +85,7 @@ def test_create_and_retrieve_analysis(db_session):
         ),
         llm_fallback_used=False,
     )
-    
+
     # 1. Insert record
     saved_record = create_analysis(db_session, dummy_response)
     assert saved_record.id is not None
@@ -95,7 +99,7 @@ def test_create_and_retrieve_analysis(db_session):
     assert saved_record.entities[0].text == "$49.99"
     assert saved_record.entities[0].label == "MONEY"
     assert saved_record.entities[1].text == "john@example.com"
-    assert saved_record.entities[1].label == "EMAIL"                        
+    assert saved_record.entities[1].label == "EMAIL"
     assert len(saved_record.evidence) == 1
     assert saved_record.evidence[0].sentence == "I was charged $49.99 twice."
 

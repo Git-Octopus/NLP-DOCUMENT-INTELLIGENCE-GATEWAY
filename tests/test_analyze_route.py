@@ -20,10 +20,12 @@ def create_dummy_docx_bytes(text: str) -> bytes:
 
 def test_analyze_direct_text_success(client):
     """Test POST /analyze using form-data text parameter."""
-    payload = {"text": "I was charged $49.99 twice on my invoice. Please refund john@example.com."}
-    
+    payload = {
+        "text": "I was charged $49.99 twice on my invoice. Please refund john@example.com."
+    }
+
     response = client.post("/analyze", data=payload)
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["request_id"].startswith("req-")
@@ -61,7 +63,10 @@ def test_analyze_missing_payload_error(client):
     response = client.post("/analyze")
 
     assert response.status_code == 400
-    assert "Either 'text' string or 'file' document upload must be provided." in response.json()["detail"]
+    assert (
+        "Either 'text' string or 'file' document upload must be provided."
+        in response.json()["detail"]
+    )
 
 
 def test_analyze_short_text_error(client):

@@ -8,7 +8,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
 # SQLite multi-threading configuration
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+connect_args = (
+    {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+)
 
 # Create SQLAlchemy Engine
 engine = create_engine(
@@ -23,6 +25,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for ORM models
 Base = declarative_base()
 
+
 def get_db():
     """FastAPI dependency to provide a database session per request."""
     db = SessionLocal()
@@ -30,4 +33,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./nlp_gateway.db"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
 

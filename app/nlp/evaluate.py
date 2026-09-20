@@ -26,7 +26,9 @@ from app.nlp.sentiment import analyze_sentiment_local
 
 def load_dataset(dataset_path: str = None) -> List[Dict[str, Any]]:
     if not dataset_path:
-        dataset_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "evaluation_dataset.json")
+        dataset_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "data", "evaluation_dataset.json"
+        )
     with open(dataset_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -65,8 +67,10 @@ def evaluate_pipeline(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         for exp_e in expected_entities:
             exp_text = exp_e.get("text", "").lower()
             matched = any(
-                (exp_text in (p.get("entity") or p.get("text", "")).lower() or
-                 (p.get("entity") or p.get("text", "")).lower() in exp_text)
+                (
+                    exp_text in (p.get("entity") or p.get("text", "")).lower()
+                    or (p.get("entity") or p.get("text", "")).lower() in exp_text
+                )
                 for p in pred_entities
             )
             if matched:
@@ -75,8 +79,16 @@ def evaluate_pipeline(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Compute metrics
     sentiment_accuracy = sentiment_correct / total_samples if total_samples else 0.0
 
-    prec = true_positive_entities / total_predicted_entities if total_predicted_entities else 0.0
-    rec = true_positive_entities / total_expected_entities if total_expected_entities else 0.0
+    prec = (
+        true_positive_entities / total_predicted_entities
+        if total_predicted_entities
+        else 0.0
+    )
+    rec = (
+        true_positive_entities / total_expected_entities
+        if total_expected_entities
+        else 0.0
+    )
     ner_f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) else 0.0
 
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
@@ -95,7 +107,9 @@ def evaluate_pipeline(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def generate_markdown_report(metrics: Dict[str, Any], output_path: str = None):
     if not output_path:
-        output_path = os.path.join(os.path.dirname(__file__), "..", "..", "docs", "evaluation_report.md")
+        output_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "docs", "evaluation_report.md"
+        )
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     report = f"""# NLP Document Intelligence Gateway — Evaluation Report

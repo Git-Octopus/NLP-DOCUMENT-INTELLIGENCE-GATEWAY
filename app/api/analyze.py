@@ -43,7 +43,9 @@ router = APIRouter(tags=["Analysis"])
 )
 async def analyze_text_or_document(
     text: Optional[str] = Form(None, description="Direct text input to analyze"),
-    file: Optional[UploadFile] = File(None, description="Optional document file (.pdf, .docx)"),
+    file: Optional[UploadFile] = File(
+        None, description="Optional document file (.pdf, .docx)"
+    ),
     db: Session = Depends(get_db),
 ) -> AnalyzeResponse:
     """
@@ -105,7 +107,9 @@ async def analyze_text_or_document(
     kw_dicts = extract_keywords(cleaned, top_n=5)
     keyword_strings = [k["keyword"] for k in kw_dicts] if kw_dicts else []
 
-    evidence = extract_evidence_sentences(raw_text, keywords=keyword_strings, max_sentences=3)
+    evidence = extract_evidence_sentences(
+        raw_text, keywords=keyword_strings, max_sentences=3
+    )
     if not evidence:
         evidence = [raw_text]
 

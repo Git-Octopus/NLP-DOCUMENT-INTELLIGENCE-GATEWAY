@@ -23,11 +23,11 @@ def prepare_test_db():
 
 def test_analyze_pipeline_integration():
     payload = {"text": "I was charged $49.99 on my account. Please issue a refund."}
-    
+
     # Send as form data instead of JSON payload
     response = client.post("/analyze", data=payload)
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["original_text"] == payload["text"]
     assert "cleaned_text" in data
@@ -38,7 +38,11 @@ def test_analyze_pipeline_integration():
     # Confirm record is written to SQLite DB
     db = SessionLocal()
     try:
-        record = db.query(AnalysisModel).filter(AnalysisModel.original_text == payload["text"]).first()
+        record = (
+            db.query(AnalysisModel)
+            .filter(AnalysisModel.original_text == payload["text"])
+            .first()
+        )
         assert record is not None
         assert record.request_id == data["request_id"]
     finally:
