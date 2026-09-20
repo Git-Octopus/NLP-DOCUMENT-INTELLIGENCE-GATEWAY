@@ -6,8 +6,11 @@ for topic classification and duplicate detection.
 """
 
 import numpy as np
+import logging
 from typing import List
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
 
 _model = None
 

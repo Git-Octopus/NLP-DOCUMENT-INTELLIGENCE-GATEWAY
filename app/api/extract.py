@@ -1,4 +1,5 @@
 import os
+import logging
 import sys
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from sqlalchemy.orm import Session
@@ -12,6 +13,8 @@ from app.services.extractors import (
     ExtractionError,
 )
 from app.services.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Document Extraction"])
 
@@ -98,9 +101,3 @@ async def extract_document(
         error=None,
     )
 
-
-# --- DIRECT TEST RUNNER ---
-if __name__ == "__main__":
-    print("\n--- Testing Extract API Route Logic ---")
-    print("Router object imported successfully!")
-    print(f"Registered route tags: {router.tags}\n")
