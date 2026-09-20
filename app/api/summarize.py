@@ -1,5 +1,6 @@
 from fastapi import APIRouter, status , HTTPException
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
+from app.providers import get_llm_provider
 
 router = APIRouter(tags=["Summarization"])
 
@@ -8,7 +9,7 @@ router = APIRouter(tags=["Summarization"])
     "/summarize",
     response_model=SummarizeResponse,
     status_code=status.HTTP_200_OK,
-    summary="Summarize Support Text (Dummy Skeleton for Day 2)",
+    summary="Summarize Support Text",
     description="Generates an executive summary and key highlight points from customer conversations or documents.",
 )
 async def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
@@ -27,19 +28,15 @@ async def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
     words = request.text.split()
     original_len = len(words)
 
-    dummy_summary = (
-        "Customer reported repeated difficulty accessing corporate account features due to "
-        "authentication errors, requesting urgent support."
-    )
-    dummy_key_points = [
-        "Persistent service access errors reported",
-        "Initial customer troubleshooting attempts unsuccessful",
-        "Action required by tier-2 support team"
-    ]
+    provider = get_llm_provider()
+    result = provider.summarize_text(request.text, max_length=request.max_length or 150)
+
+    summary = result.get("summary", "")
+    key_points = result.get("key_points", [])
 
     return SummarizeResponse(
-        summary=dummy_summary,
-        key_points=dummy_key_points,
+        summary=summary,
+        key_points=key_points,
         original_word_count=original_len,
-        summary_word_count=len(dummy_summary.split()),
+        summary_word_count=len(summary.split()),
     )

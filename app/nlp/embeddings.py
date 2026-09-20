@@ -2,7 +2,7 @@
 Embeddings module for NLP Document Intelligence Gateway.
 
 Generates dense vector representations using SentenceTransformers (e.g. all-MiniLM-L6-v2)
-for topic classification and duplicate detection.
+for semantic topic classification and duplicate detection.
 """
 
 import numpy as np
@@ -23,7 +23,14 @@ def _get_model():
             _model = False
     return _model
 
-def get_embedding(text: str, model_name: str = "all-MiniLM-L6-v2") -> List[float]:
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+_model_instance = None
+
+
+def get_sentence_transformer_model(model_name: Optional[str] = None):
     """
     Generates a dense vector embedding (384 dimensions) for input text string.
     """
@@ -35,7 +42,26 @@ def get_embedding(text: str, model_name: str = "all-MiniLM-L6-v2") -> List[float
     # Fallback pseudo-embedding if sentence-transformers is missing
     return [0.0] * 384
 
-def get_embeddings_batch(texts: List[str], model_name: str = "all-MiniLM-L6-v2") -> List[List[float]]:
+
+def get_embedding(text: str, model_name: Optional[str] = None) -> List[float]:
+    """
+    Generates a normalized dense vector embedding (e.g. 384 dimensions) for input text string.
+    """
+    if not text or not text.strip():
+        return [0.0] * settings.EMBEDDING_DIMENSION
+
+    model = get_sentence_transformer_model(model_name)
+    if model != "fallback" and hasattr(model, "encode"):
+        try:
+            emb = model.encode(text, normalize_embeddings=True, show_progress_bar=False)
+            return emb.tolist()
+        except Exception as e:
+            logger.error(f"Error generating embedding via SentenceTransformer: {e}")
+
+    return _fallback_text_embedding(text, settings.EMBEDDING_DIMENSION)
+
+
+def get_embeddings_batch(texts: List[str], model_name: Optional[str] = None) -> List[List[float]]:
     """
     Generates dense vector embeddings for a list of input text strings in batches.
     """

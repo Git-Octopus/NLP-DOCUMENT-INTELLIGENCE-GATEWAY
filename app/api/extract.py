@@ -13,6 +13,8 @@ from app.services.extractors import (
 )
 from app.services.database import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["Document Extraction"])
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit

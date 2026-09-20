@@ -1,6 +1,7 @@
 import difflib
 from fastapi import APIRouter, status, HTTPException 
 from app.schemas.similarity import SimilarityRequest, SimilarityResponse
+from app.nlp.embeddings import embed_text, compute_cosine_similarity
 from app.config import settings
 from app.nlp.embeddings import get_embedding, compute_cosine_similarity
 
@@ -25,7 +26,7 @@ def _tfidf_fallback_similarity(text_a: str, text_b: str) -> float:
     "/similarity",
     response_model=SimilarityResponse,
     status_code=status.HTTP_200_OK,
-    summary="Compute Semantic Similarity (Dummy Skeleton for Day 2)",
+    summary="Compute Semantic Similarity",
     description="Compares two text snippets and computes cosine similarity between dense embeddings.",
 )
 async def compute_similarity(request: SimilarityRequest) -> SimilarityResponse:
