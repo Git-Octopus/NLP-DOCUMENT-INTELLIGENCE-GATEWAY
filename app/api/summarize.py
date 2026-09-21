@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status , HTTPException
 from app.schemas.summarize import SummarizeRequest, SummarizeResponse
 
 router = APIRouter(tags=["Summarization"])
@@ -13,9 +13,17 @@ router = APIRouter(tags=["Summarization"])
 )
 async def summarize_text(request: SummarizeRequest) -> SummarizeResponse:
     """
-    Day 2 skeleton endpoint. Returns schema-compliant dummy summarization data.
+     Returns schema-compliant dummy summarization data.
     Will be wired to Gemini/OpenAI provider fallback in Week 2-3.
     """
+    
+    # Input Validation Guard 
+    if len(request.text.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Text input for summarization must be at least 10 characters long.",
+        )
+        
     words = request.text.split()
     original_len = len(words)
 

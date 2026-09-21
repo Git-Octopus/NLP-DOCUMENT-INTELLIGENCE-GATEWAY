@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # SQLite Database
     DATABASE_URL: str = "sqlite:///./nlp_gateway.db"
 
+    MAX_FILE_SIZE_BYTES: int = 10485760
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
