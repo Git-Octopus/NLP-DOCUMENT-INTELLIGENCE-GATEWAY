@@ -28,7 +28,17 @@ def test_extract_endpoint_docx():
 
     response = client.post(
         "/api/v1/extract",
+<<<<<<< HEAD
         files={"file": ("test_doc.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+=======
+        files={
+            "file": (
+                "test_doc.docx",
+                docx_bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     )
 
     assert response.status_code == 200
@@ -45,11 +55,18 @@ def test_extract_endpoint_unsupported_file():
     """Test POST /api/v1/extract with an unsupported file extension."""
     response = client.post(
         "/api/v1/extract",
+<<<<<<< HEAD
         files={"file": ("test_file.txt", b"Plain text content", "text/plain")}
+=======
+        files={"file": ("test_file.txt", b"Plain text content", "text/plain")},
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     )
 
     assert response.status_code == 400
     data = response.json()
     assert "Unsupported file format" in data["detail"]
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

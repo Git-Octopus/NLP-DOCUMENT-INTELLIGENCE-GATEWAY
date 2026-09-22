@@ -20,10 +20,19 @@ def create_dummy_docx_bytes(text: str) -> bytes:
 
 def test_analyze_direct_text_success(client):
     """Test POST /analyze using form-data text parameter."""
+<<<<<<< HEAD
     payload = {"text": "I was charged $49.99 twice on my invoice. Please refund john@example.com."}
     
     response = client.post("/analyze", data=payload)
     
+=======
+    payload = {
+        "text": "I was charged $49.99 twice on my invoice. Please refund john@example.com."
+    }
+
+    response = client.post("/analyze", data=payload)
+
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     assert response.status_code == 200
     data = response.json()
     assert data["request_id"].startswith("req-")
@@ -61,7 +70,14 @@ def test_analyze_missing_payload_error(client):
     response = client.post("/analyze")
 
     assert response.status_code == 400
+<<<<<<< HEAD
     assert "Either 'text' string or 'file' document upload must be provided." in response.json()["detail"]
+=======
+    assert (
+        "Either 'text' string or 'file' document upload must be provided."
+        in response.json()["detail"]
+    )
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
 
 
 def test_analyze_short_text_error(client):
@@ -70,4 +86,8 @@ def test_analyze_short_text_error(client):
     response = client.post("/analyze", data=payload)
 
     assert response.status_code == 422
+<<<<<<< HEAD
     assert "at least 3 non-whitespace characters" in response.json()["detail"]
+=======
+    assert "at least 3 non-whitespace characters" in response.json()["detail"]
+>>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

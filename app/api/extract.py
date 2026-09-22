@@ -10,8 +10,7 @@ from app.services.extractors import (
     ExtractionError,
 )
 
-router = APIRouter(tags=["Document Extraction"])
-
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 
 
 @router.post(
@@ -95,5 +94,3 @@ async def extract_document(
         char_count=char_count,
         error=None,
     )
-
-

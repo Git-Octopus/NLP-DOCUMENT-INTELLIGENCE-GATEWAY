@@ -83,7 +83,13 @@ def test_topics_taxonomy_loading():
     assert len(topics_list) == 10
 
     topic_ids = [t["id"] for t in topics_list]
-    for expected_id in ["payment", "refund", "invoice", "account_access", "technical_support"]:
+    for expected_id in [
+        "payment",
+        "refund",
+        "invoice",
+        "account_access",
+        "technical_support",
+    ]:
         assert expected_id in topic_ids
 
 
@@ -95,7 +101,9 @@ def test_seed_topics_to_vector_store():
 
 def test_match_topic_and_intent_accuracy():
     """Verify topic and intent classification on clear customer utterances."""
-    refund_text = "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
+    refund_text = (
+        "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
+    )
     topic_result = match_topic(refund_text)
     assert topic_result["topic"] in ["Billing & Refunds", "Refund", "Payment"]
     assert topic_result["confidence"] > 0.4
@@ -134,7 +142,9 @@ def test_gemini_provider_offline_fallback():
     assert isinstance(entities, list)
     assert len(entities) >= 1
 
-    summary = provider.summarize_text("Customer reported recurring system errors when attempting to sign in.")
+    summary = provider.summarize_text(
+        "Customer reported recurring system errors when attempting to sign in."
+    )
     assert "summary" in summary
     assert isinstance(summary["key_points"], list)
 
@@ -150,7 +160,9 @@ def test_openai_provider_offline_fallback():
     assert isinstance(entities, list)
     assert len(entities) >= 1
 
-    summary = provider.summarize_text("Customer received broken item in order shipment.")
+    summary = provider.summarize_text(
+        "Customer received broken item in order shipment."
+    )
     assert "summary" in summary
     assert isinstance(summary["key_points"], list)
 
@@ -168,7 +180,7 @@ def test_end_to_end_analyze_api():
     """Verify POST /analyze end-to-end integration conforming to AnalyzeResponse schema."""
     payload = {
         "text": "My debit card was charged $89.00 on 2026-03-02 for order #ORD-4491. Please refund to customer@corp.com.",
-        "metadata": {"ticket_id": "TCK-5544", "priority": "high"}
+        "metadata": {"ticket_id": "TCK-5544", "priority": "high"},
     }
     response = client.post("/analyze", json=payload)
     assert response.status_code == 200
@@ -177,7 +189,9 @@ def test_end_to_end_analyze_api():
     validated = AnalyzeResponse.model_validate(data)
     assert validated.original_text == payload["text"]
     assert len(validated.entities) >= 1
-    assert any(e.label in ["MONEY", "ORDER_ID", "EMAIL", "DATE"] for e in validated.entities)
+    assert any(
+        e.label in ["MONEY", "ORDER_ID", "EMAIL", "DATE"] for e in validated.entities
+    )
     assert len(validated.keywords) > 0
     assert len(validated.evidence_sentences) > 0
     assert -1.0 <= validated.sentiment.score <= 1.0

@@ -104,7 +104,9 @@ def test_stopwords_and_stemming():
     assert "payment" in filtered_nltk
     assert "payment" in filtered_spacy
 
-    stemmed = apply_stemming(["charging", "deductions", "refunded"], stemmer_type="snowball")
+    stemmed = apply_stemming(
+        ["charging", "deductions", "refunded"], stemmer_type="snowball"
+    )
     assert "charg" in stemmed
     assert "refund" in stemmed
 
@@ -149,7 +151,7 @@ def test_bow_and_tfidf_matrices():
     corpus = [
         "Payment was declined by card issuer.",
         "Requesting refund for failed payment.",
-        "Delivery tracking status shows delayed parcel."
+        "Delivery tracking status shows delayed parcel.",
     ]
     res = generate_bow_and_tfidf(corpus, ngram_range=(1, 2))
     assert len(res["feature_names"]) > 0
@@ -170,7 +172,10 @@ def test_keyword_extraction_with_noun_phrases():
     keywords = extract_keywords(text, top_n=4)
     assert len(keywords) > 0
     kw_names = [k["keyword"] for k in keywords]
-    assert any("card" in k or "subscription" in k or "visa" in k or "payment" in k for k in kw_names)
+    assert any(
+        "card" in k or "subscription" in k or "visa" in k or "payment" in k
+        for k in kw_names
+    )
 
 
 # ==============================================================================
@@ -199,7 +204,9 @@ def test_evidence_sentences_ranking():
         "My payment failed and credit card was deducted twice for order #ORD-1122. "
         "Have a great afternoon."
     )
-    evidence = extract_evidence_sentences(text, keywords=["payment", "credit card", "deducted"], max_sentences=1)
+    evidence = extract_evidence_sentences(
+        text, keywords=["payment", "credit card", "deducted"], max_sentences=1
+    )
     assert len(evidence) == 1
     assert "payment failed" in evidence[0]
 
@@ -254,7 +261,9 @@ def test_sentiment_neutral():
 # 7. UNIFIED LOCAL NLP PIPELINE INTEGRATION
 # ==============================================================================
 def test_run_local_nlp_pipeline_e2e():
-    text = "Order #ORD-5541 delayed. Please refund $35 to support@client.com immediately."
+    text = (
+        "Order #ORD-5541 delayed. Please refund $35 to support@client.com immediately."
+    )
     pipeline_res = run_local_nlp_pipeline(text)
 
     assert "cleaned_text" in pipeline_res

@@ -1,10 +1,11 @@
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import settings
 
 # SQLite multi-threading configuration
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+connect_args = (
+    {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+)
 
 # Create SQLAlchemy Engine
 engine = create_engine(

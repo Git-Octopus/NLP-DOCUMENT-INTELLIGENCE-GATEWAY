@@ -16,7 +16,6 @@ from app.api.summarize import router as summarize_router
 from app.services.database import Base, engine
 from app import models
 
-
 # Configure Centralized Logging
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -25,11 +24,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gateway")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown routines."""
-    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} (Debug: {settings.DEBUG})")
-    #create analysis / entities / evidence if missing in database, and models if missing in database
+    logger.info(
+        f"Starting {settings.APP_NAME} v{settings.APP_VERSION} (Debug: {settings.DEBUG})"
+    )
+    # create analysis / entities / evidence if missing in database, and models if missing in database
     Base.metadata.create_all(bind=engine)
     logger.info("SQLite tables ensured (create_all).")
     yield
@@ -58,13 +60,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Middleware: Request & Response Logging
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     duration = round((time.time() - start_time) * 1000, 2)
-    
+
     logger.info(
         f"Method: {request.method} Path: {request.url.path} "
         f"Status: {response.status_code} Duration: {duration}ms"
@@ -104,6 +107,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": "An unexpected server error occurred. Please check logs.",
         },
     )
+
 
 # Register Core API Routers (Direct endpoints + API v1 prefix)
 app.include_router(analyze_router)
@@ -159,6 +163,7 @@ async def health_check() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
