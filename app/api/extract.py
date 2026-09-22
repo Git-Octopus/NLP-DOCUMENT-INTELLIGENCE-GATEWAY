@@ -1,16 +1,16 @@
-"""
-Document Text Extraction API endpoint for NLP Document Intelligence Gateway.
-Extracts raw text from uploaded PDF or DOCX support documents using PyMuPDF and python-docx,
-with robust fallbacks for malformed or test-fixture binary streams.
-"""
+import os
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 
-import io
-import re
-import logging
-from fastapi import APIRouter, File, UploadFile, status, HTTPException
-from app.schemas.extract import ExtractResponse
+from app.schemas import ExtractResponse
+from app.config import settings
+from app.services.extractors import (
+    extract_text_from_pdf,
+    extract_text_from_docx,
+    ExtractionError,
+)
 
-logger = logging.getLogger(__name__)
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 
 router = APIRouter(tags=["Document Extraction"])
 
@@ -19,106 +19,80 @@ router = APIRouter(tags=["Document Extraction"])
     "/extract",
     response_model=ExtractResponse,
     status_code=status.HTTP_200_OK,
-    summary="Extract Text from Document",
-    description="Extracts raw text and metadata from uploaded PDF or DOCX support documents.",
+    summary="Extract Text from Document (PDF/DOCX)",
 )
 async def extract_document(
-    file: UploadFile = File(
-        ..., description="Document file to extract text from (.pdf or .docx)"
-    )
+    file: UploadFile = File(...),
 ) -> ExtractResponse:
-    """
-    Parses PDF using PyMuPDF (fitz) or DOCX using python-docx and returns extracted plain text.
-    Handles test fixture byte streams gracefully.
-    """
-    filename = file.filename or "document.pdf"
-    extension = filename.split(".")[-1].lower() if "." in filename else ""
+    """Reads uploaded PDF or DOCX binary streams and extracts raw text content with error handling."""
+    filename = file.filename or "uploaded_document"
+    file_bytes = await file.read()
 
-    if extension not in ["pdf", "docx", "txt"]:
+    if not file_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type: '{extension}'. Only PDF and DOCX files are supported."
+            detail="Uploaded file is empty.",
         )
 
-    file_type = "docx" if extension == "docx" else ("txt" if extension == "txt" else "pdf")
+    # Check file size limit
+    if len(file_bytes) > settings.MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"File size exceeds maximum allowed limit of "
+                f"{settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB."
+            ),
+        )
+
+    # Determine file type from extension
+    lower_name = filename.lower()
+    extracted_text = ""
+    file_type = "unknown"
 
     try:
-        content = await file.read()
-        extracted_text = ""
-        error_msg = None
+        if lower_name.endswith(".pdf"):
+            file_type = "pdf"
+            extracted_text = extract_text_from_pdf(file_bytes)
+        elif lower_name.endswith(".docx"):
+            file_type = "docx"
+            extracted_text = extract_text_from_docx(file_bytes)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported file format. Please upload a .pdf or .docx file.",
+            )
 
-        if file_type == "pdf":
-            try:
-                import fitz  # PyMuPDF
-                doc = fitz.open(stream=content, filetype="pdf")
-                pages_text = []
-                for page_num in range(len(doc)):
-                    page = doc[page_num]
-                    t = page.get_text()
-                    if t.strip():
-                        pages_text.append(t.strip())
-                extracted_text = "\n\n".join(pages_text)
-            except Exception as e:
-                logger.warning(f"PyMuPDF parse attempt: {e}")
-                extracted_text = ""
-
-            # If empty (e.g. dummy test stream), extract printable strings or provide fallback
-            if not extracted_text.strip():
-                printable = re.findall(r"[A-Za-z0-9_\-\.\s\$\@\#]{4,}", content.decode("latin1", errors="ignore"))
-                valid_words = [w.strip() for w in printable if len(w.strip()) > 3 and not w.startswith("%PDF")]
-                if valid_words:
-                    extracted_text = " ".join(valid_words)
-                else:
-                    extracted_text = f"Extracted customer support content from PDF file {filename}."
-
-        elif file_type == "docx":
-            try:
-                import docx
-                doc = docx.Document(io.BytesIO(content))
-                paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-                for table in doc.tables:
-                    for row in table.rows:
-                        row_text = " | ".join([cell.text.strip() for cell in row.cells if cell.text.strip()])
-                        if row_text:
-                            paragraphs.append(row_text)
-                extracted_text = "\n\n".join(paragraphs)
-            except Exception as e:
-                logger.warning(f"python-docx parse attempt: {e}")
-                extracted_text = ""
-
-            # If empty (e.g. dummy test stream), extract printable strings or fallback
-            if not extracted_text.strip():
-                printable = re.findall(r"[A-Za-z0-9_\-\.\s\$\@\#]{4,}", content.decode("latin1", errors="ignore"))
-                valid_words = [w.strip() for w in printable if len(w.strip()) > 3 and not w.startswith("PK")]
-                if valid_words:
-                    extracted_text = " ".join(valid_words)
-                else:
-                    extracted_text = f"Extracted customer support content from DOCX file {filename}."
-
-        else:  # txt
-            try:
-                extracted_text = content.decode("utf-8", errors="replace").strip()
-            except Exception as e:
-                extracted_text = f"Extracted plain text from {filename}."
-
-        words = extracted_text.split()
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        if isinstance(exc, ExtractionError):
+            return ExtractResponse(
+                filename=filename,
+                file_type=file_type,
+                extracted_text="",
+                word_count=0,
+                char_count=0,
+                error=str(exc),
+            )
         return ExtractResponse(
             filename=filename,
             file_type=file_type,
-            extracted_text=extracted_text,
-            word_count=len(words),
-            char_count=len(extracted_text),
-            error=error_msg,
+            extracted_text="",
+            word_count=0,
+            char_count=0,
+            error=f"Failed to extract document content: {str(exc)}",
         )
 
-    except Exception as e:
-        logger.error(f"Extraction error: {e}")
-        fallback_text = f"Extracted document content from {filename}."
-        return ExtractResponse(
-            filename=filename,
-            file_type=file_type,
-            extracted_text=fallback_text,
-            word_count=len(fallback_text.split()),
-            char_count=len(fallback_text),
-            error=None,
-        )
+    # Calculate word and character counts
+    words = extracted_text.split()
+    word_count = len(words)
+    char_count = len(extracted_text)
+
+    return ExtractResponse(
+        filename=filename,
+        file_type=file_type,
+        extracted_text=extracted_text,
+        word_count=word_count,
+        char_count=char_count,
+        error=None,
+    )

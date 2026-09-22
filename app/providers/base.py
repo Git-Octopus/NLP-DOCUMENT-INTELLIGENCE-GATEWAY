@@ -29,23 +29,19 @@ class BaseLLMProvider(ABC):
         self,
         text: str,
         candidate_topics: List[Dict[str, Any]],
-        available_taxonomy: Optional[List[Dict[str, Any]]] = None
+        available_taxonomy: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         pass
 
     @abstractmethod
     def extract_domain_entities(
-        self,
-        text: str,
-        existing_entities: Optional[List[Dict[str, Any]]] = None
+        self, text: str, existing_entities: Optional[List[Dict[str, Any]]] = None
     ) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod
     def summarize_text(
-        self,
-        text: str,
-        max_length: Optional[int] = 150
+        self, text: str, max_length: Optional[int] = 150
     ) -> Dict[str, Any]:
         pass
 

@@ -8,6 +8,10 @@ pyyaml>=6.0.1
 requests>=2.31.0
 httpx>=0.26.0
 
+# --- Persistence & uploads (Dev 1 — Step 1) ---
+sqlalchemy>=2.0.0
+python-multipart>=0.0.9
+
 # --- Core Local NLP Pipeline ---
 spacy>=3.7.2
 nltk>=3.8.1

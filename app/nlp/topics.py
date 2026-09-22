@@ -27,15 +27,51 @@ _TOPICS_CACHE: Optional[Dict[str, Any]] = None
 # Rule-based intent keyword mapping for high-precision fast resolution
 INTENT_RULE_PATTERNS = [
     (r"\b(refund|money back|charge back|reimburse|reversal)\b", "request_refund", 0.92),
-    (r"\b(reset|forgot|change)\s+(my\s+)?(password|passcode|pin)\b", "reset_password", 0.94),
-    (r"\b(cancel|terminate|stop)\s+(my\s+)?(subscription|membership|plan|account)\b", "cancel_subscription", 0.91),
-    (r"\b(where\s+is|track|status\s+of)\s+(my\s+)?(order|shipment|delivery|package)\b", "track_order", 0.93),
-    (r"\b(return|exchange)\s+(the\s+)?(item|product|goods|order)\b", "return_item", 0.90),
-    (r"\b(invoice|receipt|tax invoice|billing statement|bill copy)\b", "request_invoice", 0.88),
-    (r"\b(update|change)\s+(my\s+)?(email|phone|address|profile|name)\b", "update_account_details", 0.89),
-    (r"\b(damaged|broken|defective|faulty|cracked|ruined)\b", "report_damaged_item", 0.91),
-    (r"\b(charged twice|duplicate charge|double billed|overcharged)\b", "dispute_duplicate_charge", 0.95),
-    (r"\b(error\s+\d+|crash|bug|not loading|blank screen|freeze)\b", "report_technical_bug", 0.89),
+    (
+        r"\b(reset|forgot|change)\s+(my\s+)?(password|passcode|pin)\b",
+        "reset_password",
+        0.94,
+    ),
+    (
+        r"\b(cancel|terminate|stop)\s+(my\s+)?(subscription|membership|plan|account)\b",
+        "cancel_subscription",
+        0.91,
+    ),
+    (
+        r"\b(where\s+is|track|status\s+of)\s+(my\s+)?(order|shipment|delivery|package)\b",
+        "track_order",
+        0.93,
+    ),
+    (
+        r"\b(return|exchange)\s+(the\s+)?(item|product|goods|order)\b",
+        "return_item",
+        0.90,
+    ),
+    (
+        r"\b(invoice|receipt|tax invoice|billing statement|bill copy)\b",
+        "request_invoice",
+        0.88,
+    ),
+    (
+        r"\b(update|change)\s+(my\s+)?(email|phone|address|profile|name)\b",
+        "update_account_details",
+        0.89,
+    ),
+    (
+        r"\b(damaged|broken|defective|faulty|cracked|ruined)\b",
+        "report_damaged_item",
+        0.91,
+    ),
+    (
+        r"\b(charged twice|duplicate charge|double billed|overcharged)\b",
+        "dispute_duplicate_charge",
+        0.95,
+    ),
+    (
+        r"\b(error\s+\d+|crash|bug|not loading|blank screen|freeze)\b",
+        "report_technical_bug",
+        0.89,
+    ),
 ]
 
 
@@ -75,13 +111,15 @@ def get_available_topics() -> List[Dict[str, Any]]:
     topics_dict = cfg.get("topics", {})
     results = []
     for topic_id, details in topics_dict.items():
-        results.append({
-            "id": details.get("id", topic_id),
-            "name": details.get("name", topic_id.title()),
-            "description": details.get("description", ""),
-            "intents": details.get("intents", []),
-            "examples": details.get("examples", [])
-        })
+        results.append(
+            {
+                "id": details.get("id", topic_id),
+                "name": details.get("name", topic_id.title()),
+                "description": details.get("description", ""),
+                "intents": details.get("intents", []),
+                "examples": details.get("examples", []),
+            }
+        )
     return results
 
 
@@ -105,23 +143,27 @@ def seed_topics_to_vector_store() -> int:
         # Anchor 1: Topic Description
         if item.get("description"):
             texts_to_embed.append(item["description"])
-            points_meta.append({
-                "topic_id": topic_id,
-                "topic_name": topic_name,
-                "type": "description",
-                "text": item["description"]
-            })
+            points_meta.append(
+                {
+                    "topic_id": topic_id,
+                    "topic_name": topic_name,
+                    "type": "description",
+                    "text": item["description"],
+                }
+            )
 
         # Anchors 2+: Example Utterances
         for example in item.get("examples", []):
             if example.strip():
                 texts_to_embed.append(example.strip())
-                points_meta.append({
-                    "topic_id": topic_id,
-                    "topic_name": topic_name,
-                    "type": "example",
-                    "text": example.strip()
-                })
+                points_meta.append(
+                    {
+                        "topic_id": topic_id,
+                        "topic_name": topic_name,
+                        "type": "example",
+                        "text": example.strip(),
+                    }
+                )
 
     if not texts_to_embed:
         return 0
@@ -130,12 +172,12 @@ def seed_topics_to_vector_store() -> int:
     points_data = []
 
     for idx, (meta, vector) in enumerate(zip(points_meta, embeddings)):
-        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{meta['topic_id']}_{idx}_{meta['text'][:30]}"))
-        points_data.append({
-            "id": point_id,
-            "vector": vector,
-            "payload": meta
-        })
+        point_id = str(
+            uuid.uuid5(
+                uuid.NAMESPACE_DNS, f"{meta['topic_id']}_{idx}_{meta['text'][:30]}"
+            )
+        )
+        points_data.append({"id": point_id, "vector": vector, "payload": meta})
 
     upsert_topic_vectors(points_data)
     logger.info(f"Successfully seeded {len(points_data)} topic vectors into Qdrant.")
@@ -157,13 +199,19 @@ def ensure_topics_seeded() -> int:
     return 0
 
 
-def match_topic(text: str, confidence_threshold: Optional[float] = None) -> Dict[str, Any]:
+def match_topic(
+    text: str, confidence_threshold: Optional[float] = None
+) -> Dict[str, Any]:
     """
     Determines document topic matching TopicMatch schema:
     {'topic': str, 'confidence': float, 'resolved_by': 'qdrant' | 'llm_fallback'}
     """
     ensure_topics_seeded()
-    threshold = confidence_threshold if confidence_threshold is not None else getattr(settings, "SIMILARITY_THRESHOLD", 0.58)
+    threshold = (
+        confidence_threshold
+        if confidence_threshold is not None
+        else getattr(settings, "SIMILARITY_THRESHOLD", 0.58)
+    )
     query_vector = embed_text(text)
 
     similar = search_similar_topics(query_vector, top_k=3)
@@ -173,33 +221,40 @@ def match_topic(text: str, confidence_threshold: Optional[float] = None) -> Dict
         return {
             "topic": top_match["topic"],
             "confidence": round(float(top_match["score"]), 4),
-            "resolved_by": "qdrant"
+            "resolved_by": "qdrant",
         }
 
     # Low confidence or ambiguous: Trigger LLM provider fallback
     provider = get_llm_provider()
     resolved = provider.resolve_ambiguous(
-        text=text,
-        candidate_topics=similar,
-        available_taxonomy=get_available_topics()
+        text=text, candidate_topics=similar, available_taxonomy=get_available_topics()
     )
 
     conf = round(float(resolved.get("confidence", 0.75)), 4)
     return {
-        "topic": resolved.get("topic", similar[0]["topic"] if similar else "General Support"),
+        "topic": resolved.get(
+            "topic", similar[0]["topic"] if similar else "General Support"
+        ),
         "confidence": conf,
-        "resolved_by": "llm_fallback"
+        "resolved_by": "llm_fallback",
     }
 
 
-def match_intent(text: str, confidence_threshold: Optional[float] = None) -> Dict[str, Any]:
+def match_intent(
+    text: str, confidence_threshold: Optional[float] = None
+) -> Dict[str, Any]:
     """
     Determines customer intent matching IntentMatch schema:
     {'intent': str, 'confidence': float, 'resolved_by': 'rules' | 'qdrant' | 'llm_fallback'}
     """
     import re
+
     ensure_topics_seeded()
-    threshold = confidence_threshold if confidence_threshold is not None else getattr(settings, "SIMILARITY_THRESHOLD", 0.58)
+    threshold = (
+        confidence_threshold
+        if confidence_threshold is not None
+        else getattr(settings, "SIMILARITY_THRESHOLD", 0.58)
+    )
 
     # Step 1: High precision rule-based patterns
     lower_text = text.lower()
@@ -208,7 +263,7 @@ def match_intent(text: str, confidence_threshold: Optional[float] = None) -> Dic
             return {
                 "intent": intent_name,
                 "confidence": round(float(conf), 4),
-                "resolved_by": "rules"
+                "resolved_by": "rules",
             }
 
     # Step 2: Vector search against topic taxonomy
@@ -227,19 +282,17 @@ def match_intent(text: str, confidence_threshold: Optional[float] = None) -> Dic
         return {
             "intent": primary_intent,
             "confidence": round(float(top_topic["score"]), 4),
-            "resolved_by": "qdrant"
+            "resolved_by": "qdrant",
         }
 
     # Step 3: LLM fallback
     provider = get_llm_provider()
     resolved = provider.resolve_ambiguous(
-        text=text,
-        candidate_topics=similar,
-        available_taxonomy=get_available_topics()
+        text=text, candidate_topics=similar, available_taxonomy=get_available_topics()
     )
     conf = round(float(resolved.get("confidence", 0.75)), 4)
     return {
         "intent": resolved.get("intent", "general_inquiry"),
         "confidence": conf,
-        "resolved_by": "llm_fallback"
+        "resolved_by": "llm_fallback",
     }

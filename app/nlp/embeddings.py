@@ -2,110 +2,102 @@
 Embeddings module for NLP Document Intelligence Gateway.
 
 Generates dense vector representations using SentenceTransformers (e.g. all-MiniLM-L6-v2)
-for semantic topic classification and duplicate detection.
+for topic classification and duplicate detection.
 """
 
-from typing import List, Union, Optional
+import hashlib
+import math
+import re
+from typing import List
+from functools import lru_cache
 import numpy as np
-import logging
 
-from app.config import settings
-
-logger = logging.getLogger(__name__)
-
-_model_instance = None
+_model = None
 
 
-def get_sentence_transformer_model(model_name: Optional[str] = None):
-    """
-    Lazy singleton loader for SentenceTransformer model.
-    """
-    global _model_instance
-    if _model_instance is None:
-        target_model = model_name or settings.EMBEDDING_MODEL_NAME
-        logger.info(f"Loading SentenceTransformer embedding model: {target_model}")
+def _get_model():
+    """Lazy loader for SentenceTransformer model."""
+    global _model
+    if _model is None:
         try:
             from sentence_transformers import SentenceTransformer
-            _model_instance = SentenceTransformer(target_model)
-        except Exception as e:
-            logger.warning(f"SentenceTransformer could not load '{target_model}' ({e}). Falling back to lightweight embeddings.")
-            _model_instance = "fallback"
-    return _model_instance
+            from app.config import settings
+
+            _model = SentenceTransformer(settings.EMBEDDING_MODEL)
+        except Exception:
+            _model = False
+    return _model
 
 
-def get_embedding(text: str, model_name: Optional[str] = None) -> List[float]:
+def _fallback_embedding(text: str, dimension: int = 384) -> List[float]:
+    vector = [0.0] * dimension
+    tokens = re.findall(r"\w+", text.lower())
+
+    for token in tokens:
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        index = int.from_bytes(digest[:4], "big") % dimension
+        sign = 1.0 if digest[4] & 1 else -1.0
+        vector[index] += sign
+
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm == 0:
+        vector[0] = 1.0
+        norm = 1.0
+
+    return [value / norm for value in vector]
+
+
+def get_embedding(text: str, model_name: str = "all-MiniLM-L6-v2") -> List[float]:
     """
-    Generates a normalized dense vector embedding (e.g. 384 dimensions) for input text string.
+    Generates a dense vector embedding (384 dimensions) for input text string.
     """
-    if not text or not text.strip():
-        return [0.0] * settings.EMBEDDING_DIMENSION
+    model = _get_model()
 
-    model = get_sentence_transformer_model(model_name)
-    if model != "fallback" and hasattr(model, "encode"):
-        try:
-            emb = model.encode(text, normalize_embeddings=True, show_progress_bar=False)
-            return emb.tolist()
-        except Exception as e:
-            logger.error(f"Error generating embedding via SentenceTransformer: {e}")
+    if model:
+        embedding = model.encode(text, convert_to_numpy=True)
+        return embedding.astype(float).tolist()
 
-    return _fallback_text_embedding(text, settings.EMBEDDING_DIMENSION)
+    from app.config import settings
+
+    return _fallback_embedding(text, settings.EMBEDDING_DIMENSION)
 
 
-def get_embeddings_batch(texts: List[str], model_name: Optional[str] = None) -> List[List[float]]:
+def get_embeddings_batch(
+    texts: List[str],
+    model_name: str = "all-MiniLM-L6-v2",
+) -> List[List[float]]:
     """
     Generates dense vector embeddings for a list of input text strings in batches.
     """
-    if not texts:
-        return []
+    model = _get_model()
 
-    model = get_sentence_transformer_model(model_name)
-    if model != "fallback" and hasattr(model, "encode"):
-        try:
-            embs = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-            return [e.tolist() for e in embs]
-        except Exception as e:
-            logger.error(f"Error in batch embeddings: {e}")
+    if model:
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return embeddings.astype(float).tolist()
 
-    return [_fallback_text_embedding(t, settings.EMBEDDING_DIMENSION) for t in texts]
+    from app.config import settings
+
+    return [_fallback_embedding(text, settings.EMBEDDING_DIMENSION) for text in texts]
 
 
-def compute_cosine_similarity(vec_a: Union[List[float], np.ndarray], vec_b: Union[List[float], np.ndarray]) -> float:
-    """
-    Computes cosine similarity between two vector representations.
-    Returns float score between 0.0 and 1.0.
-    """
-    a = np.array(vec_a, dtype=np.float32)
-    b = np.array(vec_b, dtype=np.float32)
+def embed_text(text: str) -> List[float]:
+    return get_embedding(text)
+
+
+def embed_texts(texts: List[str]) -> List[List[float]]:
+    return get_embeddings_batch(texts)
+
+
+def compute_cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
+    """Computes cosine similarity score between two dense vectors."""
+    a = np.array(vec_a, dtype=float)
+    b = np.array(vec_b, dtype=float)
 
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
 
-    if norm_a == 0 or norm_b == 0:
+    if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
 
-    dot = np.dot(a, b)
-    similarity = float(dot / (norm_a * norm_b))
-    return max(0.0, min(1.0, (similarity + 1.0) / 2.0 if similarity < 0 else similarity))
-
-
-def _fallback_text_embedding(text: str, dim: int = 384) -> List[float]:
-    """
-    Lightweight deterministic hashing vector for offline/testing scenarios.
-    """
-    vec = np.zeros(dim, dtype=np.float32)
-    words = text.lower().split()
-    if not words:
-        return vec.tolist()
-    for word in words:
-        h = hash(word) % dim
-        vec[h] += 1.0
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec = vec / norm
-    return vec.tolist()
-
-
-# Convenience aliases for cross-module compatibility
-embed_text = get_embedding
-embed_texts = get_embeddings_batch
-cosine_similarity = compute_cosine_similarity
+    score = float(np.dot(a, b) / (norm_a * norm_b))
+    return max(0.0, min(1.0, score))

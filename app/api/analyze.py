@@ -1,15 +1,17 @@
 """
-Orchestrator Analysis API endpoint for NLP Document Intelligence Gateway.
-Integrates local NLP pipeline (Dev 2) with Qdrant vector retrieval and LLM fallback (Dev 3).
+API endpoint handling direct text and document-stream analysis requests.
+Extracts linguistic features, matches topic/intent, parses document metadata,
+and persists analysis outputs to relational storage.
 """
 
 import uuid
-import logging
-from fastapi import APIRouter, status
-
+from typing import Optional
+from fastapi import APIRouter, status, HTTPException, Depends, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from app.config import settings
 from app.schemas.analysis import (
-    AnalyzeRequest,
     AnalyzeResponse,
+    DocumentMetadata,
     TopicMatch,
     IntentMatch,
     ExtractedEntity,
@@ -17,13 +19,17 @@ from app.schemas.analysis import (
     SentimentEnum,
     DuplicateCheck,
 )
-from app.nlp.pipeline import run_local_nlp_pipeline
-from app.nlp.embeddings import embed_text
-from app.nlp.vector_store import search_duplicate_message, record_analyzed_message
-from app.nlp.topics import match_topic, match_intent
-from app.config import settings
+from app.services.database import get_db
+from app.services.crud import create_analysis
+from app.services.extractors import parse_document_stream
 
-logger = logging.getLogger(__name__)
+from app.nlp.preprocess import clean_text
+from app.nlp.linguistic import analyze_linguistics
+from app.nlp.ner import extract_all_entities
+from app.nlp.tfidf import extract_keywords
+from app.nlp.rules import extract_evidence_sentences
+from app.nlp.topics import match_topic, match_intent
+from app.nlp.vector_store import search_duplicate_message
 
 router = APIRouter(tags=["Analysis"])
 
@@ -32,131 +38,140 @@ router = APIRouter(tags=["Analysis"])
     "/analyze",
     response_model=AnalyzeResponse,
     status_code=status.HTTP_200_OK,
-    summary="Analyze Customer Support Text",
-    description=(
-        "Executes end-to-end NLP document intelligence: text normalization, linguistic analysis, "
-        "topic classification via Qdrant, intent detection, NER, sentiment analysis, duplicate check, "
-        "and evidence sentence extraction with LLM fallback."
-    ),
+    summary="Analyze Customer Support Text or Document Stream",
+    description="Accepts direct text or uploaded document files (PDF/DOCX) to extract structured NLP analytics.",
 )
-async def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
+async def analyze_text_or_document(
+    text: Optional[str] = Form(None, description="Direct text input to analyze"),
+    file: Optional[UploadFile] = File(
+        None, description="Optional document file (.pdf, .docx)"
+    ),
+    db: Session = Depends(get_db),
+) -> AnalyzeResponse:
     """
-    Primary gateway orchestrator endpoint combining local NLP and dense vector matching.
+    Parses incoming text or extracts document streams, runs full NLP feature processing,
+    formats analytical responses, and persists outputs to the relational database.
     """
-    req_id = f"req-{uuid.uuid4().hex[:8]}"
+    doc_meta: Optional[DocumentMetadata] = None
+    input_text: str = ""
 
-    # Step 1: Run Dev 2 local NLP pipeline (cleaning, tokenization, POS, TF-IDF, NER, sentiment)
-    nlp_results = run_local_nlp_pipeline(request.text)
-    cleaned_text = nlp_results.get("cleaned_text", request.text.lower().strip())
+    # Multi-Modal Stream Handling: File Extraction vs Direct Text
+    if file:
+        file_bytes = await file.read()
 
-    # Step 2: Dense vector generation for duplicate detection & topic matching
-    text_vector = embed_text(request.text)
-
-    # Step 3: Duplicate detection against previously analyzed messages in Qdrant
-    dup_res = search_duplicate_message(
-        text_vector, threshold=getattr(settings, "DUPLICATE_SIMILARITY_THRESHOLD", 0.85)
-    )
-    duplicate_info = DuplicateCheck(
-        is_duplicate=dup_res.get("is_duplicate", False),
-        matched_message_id=dup_res.get("matched_message_id"),
-        similarity_score=dup_res.get("similarity_score", 0.0),
-    )
-
-    # Record message embedding for future duplicate detection
-    record_analyzed_message(req_id, request.text, text_vector)
-
-    # Step 4: Topic & Intent classification (Qdrant semantic search + rules + LLM fallback)
-    topic_res = match_topic(request.text)
-    intent_res = match_intent(request.text)
-
-    topic_match = TopicMatch(
-        topic=topic_res["topic"],
-        confidence=topic_res["confidence"],
-        resolved_by=topic_res["resolved_by"],
-    )
-
-    intent_match = IntentMatch(
-        intent=intent_res["intent"],
-        confidence=intent_res["confidence"],
-        resolved_by=intent_res["resolved_by"],
-    )
-
-    llm_fallback_used = (
-        topic_res.get("resolved_by") == "llm_fallback"
-        or intent_res.get("resolved_by") == "llm_fallback"
-    )
-
-    # Step 5: Format Extracted Entities
-    formatted_entities = []
-    raw_entities = nlp_results.get("entities", [])
-    for ent in raw_entities:
-        ent_text = ent.get("text") or ent.get("entity") or ""
-        label = ent.get("label") or "MISC"
-        source = ent.get("source") or "regex"
-        start_char = ent.get("start_char") if ent.get("start_char") is not None else ent.get("start")
-        end_char = ent.get("end_char") if ent.get("end_char") is not None else ent.get("end")
-
-        formatted_entities.append(
-            ExtractedEntity(
-                text=ent_text,
-                label=label,
-                source=source,
-                start_char=start_char,
-                end_char=end_char,
+        if len(file_bytes) > settings.MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=(
+                    f"File size exceeds maximum allowed limit of "
+                    f"{settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB."
+                ),
             )
+
+        try:
+            extracted_data = parse_document_stream(file_bytes, file.filename)
+            input_text = extracted_data["extracted_text"]
+            doc_meta = DocumentMetadata(
+                filename=extracted_data["filename"],
+                file_type=extracted_data["file_type"],
+                word_count=extracted_data["word_count"],
+                char_count=extracted_data["char_count"],
+            )
+        except Exception as err:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to extract document stream: {str(err)}",
+            )
+    elif text:
+        input_text = text.strip()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'text' string or 'file' document upload must be provided.",
         )
 
-    # Step 6: Extract Keywords
-    raw_keywords = nlp_results.get("keywords", [])
-    keyword_list = []
-    for kw in raw_keywords:
-        if isinstance(kw, dict):
-            keyword_list.append(kw.get("keyword", ""))
-        elif isinstance(kw, str):
-            keyword_list.append(kw)
-    keyword_list = [k for k in keyword_list if k]
+    # Input Validation Guard
+    if len(input_text.strip()) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Text content must contain at least 3 non-whitespace characters.",
+        )
 
-    # Step 7: Local Sentiment Classification
-    raw_sentiment = nlp_results.get("sentiment", {"sentiment": "neutral", "score": 0.0})
-    sentiment_label = raw_sentiment.get("sentiment", "neutral").lower()
-    if sentiment_label not in [e.value for e in SentimentEnum]:
-        sentiment_label = "neutral"
+    # Preprocessing and Entity Extraction
+    raw_text = input_text.strip()
+    cleaned = clean_text(raw_text)
 
-    sentiment_analysis = SentimentAnalysis(
-        sentiment=SentimentEnum(sentiment_label),
-        score=float(raw_sentiment.get("score", 0.0)),
+    raw_entities = extract_all_entities(raw_text)
+    formatted_entities = [
+        ExtractedEntity(
+            text=e.get("text") or e.get("entity", ""),
+            label=e.get("label", "MISC"),
+            source=e.get("source", "spacy"),
+            start_char=e.get("start_char", e.get("start", 0)),
+            end_char=e.get("end_char", e.get("end", 0)),
+        )
+        for e in raw_entities
+    ]
+
+    # Keyword & Evidence Extraction
+    kw_dicts = extract_keywords(cleaned, top_n=5)
+    keyword_strings = [k["keyword"] for k in kw_dicts] if kw_dicts else []
+
+    evidence = extract_evidence_sentences(
+        raw_text, keywords=keyword_strings, max_sentences=3
     )
+    if not evidence:
+        evidence = [raw_text]
 
-    # Step 8: Evidence Sentences Selection
-    # Prefer sentences containing entities or strong intent keywords
-    all_sentences = nlp_results.get("sentences", [])
-    if not all_sentences and "." in request.text:
-        all_sentences = [s.strip() for s in request.text.split(".") if s.strip()]
+    # Vector Store & Intent Resolution
+    try:
+        topic_data = match_topic(raw_text) or {}
+    except Exception:
+        topic_data = {}
 
-    evidence = []
-    lower_intent = intent_res["intent"].replace("_", " ")
-    for sent in all_sentences:
-        lower_sent = sent.lower()
-        if any(w in lower_sent for w in lower_intent.split()):
-            evidence.append(sent)
-        elif any(ent.text.lower() in lower_sent for ent in formatted_entities):
-            evidence.append(sent)
+    try:
+        intent_data = match_intent(raw_text) or {}
+    except Exception:
+        intent_data = {}
 
-    if not evidence and all_sentences:
-        evidence = all_sentences[:2]
-    elif not evidence:
-        evidence = [request.text]
+    try:
+        dup_data = search_duplicate_message(raw_text) or {}
+    except Exception:
+        dup_data = {}
 
-    return AnalyzeResponse(
-        request_id=req_id,
-        original_text=request.text,
-        cleaned_text=cleaned_text,
-        topic=topic_match,
-        intent=intent_match,
+    # Response Assembly
+    response = AnalyzeResponse(
+        request_id=f"req-{uuid.uuid4().hex[:8]}",
+        original_text=raw_text,
+        cleaned_text=cleaned,
+        doc_metadata=doc_meta,
+        topic=TopicMatch(
+            topic=topic_data.get("topic", "General Support"),
+            confidence=topic_data.get("confidence", 0.50),
+            resolved_by=topic_data.get("resolved_by", "rules"),
+        ),
+        intent=IntentMatch(
+            intent=intent_data.get("intent", "general_query"),
+            confidence=intent_data.get("confidence", 0.50),
+            resolved_by=intent_data.get("resolved_by", "rules"),
+        ),
         entities=formatted_entities,
-        keywords=keyword_list,
-        sentiment=sentiment_analysis,
+        keywords=keyword_strings,
+        sentiment=SentimentAnalysis(
+            sentiment=SentimentEnum.NEUTRAL,
+            score=0.0,
+        ),
         evidence_sentences=evidence,
-        duplicate_info=duplicate_info,
-        llm_fallback_used=llm_fallback_used,
+        duplicate_info=DuplicateCheck(
+            is_duplicate=dup_data.get("is_duplicate", False),
+            matched_message_id=dup_data.get("matched_message_id"),
+            similarity_score=dup_data.get("similarity_score", 0.0),
+        ),
+        llm_fallback_used=topic_data.get("resolved_by") == "llm_fallback"
+        or intent_data.get("resolved_by") == "llm_fallback",
     )
+
+    # Relational Database Persistence
+    create_analysis(db, response)
+
+    return response

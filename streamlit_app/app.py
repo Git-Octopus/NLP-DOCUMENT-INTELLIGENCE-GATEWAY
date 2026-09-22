@@ -126,7 +126,10 @@ st.markdown(
 # Sidebar Configuration & Server State
 # ------------------------------------------------------------------------------
 with st.sidebar:
-    st.image("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80", use_container_width=True)
+    st.image(
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80",
+        use_container_width=True,
+    )
     st.markdown("### ⚙️ Gateway Settings")
     api_url = st.text_input("FastAPI Gateway URL", value="http://localhost:8000")
 
@@ -137,7 +140,9 @@ with st.sidebar:
             r = requests.get(f"{api_url}/health", timeout=3)
             if r.status_code == 200:
                 data = r.json()
-                st.success(f"Online: {data.get('app_name', 'Gateway')} (v{data.get('version', '1.0.0')})")
+                st.success(
+                    f"Online: {data.get('app_name', 'Gateway')} (v{data.get('version', '1.0.0')})"
+                )
             else:
                 st.error(f"HTTP {r.status_code}")
         except Exception as e:
@@ -185,20 +190,24 @@ st.markdown(
 # ------------------------------------------------------------------------------
 # Main Tabs
 # ------------------------------------------------------------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🎫 Ticket Analyzer",
-    "🔍 Semantic Similarity",
-    "🏷️ Topic Taxonomy",
-    "📄 Document Extractor",
-    "🧠 Architecture Guide",
-])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    [
+        "🎫 Ticket Analyzer",
+        "🔍 Semantic Similarity",
+        "🏷️ Topic Taxonomy",
+        "📄 Document Extractor",
+        "🧠 Architecture Guide",
+    ]
+)
 
 # ------------------------------------------------------------------------------
 # TAB 1: Ticket Analyzer
 # ------------------------------------------------------------------------------
 with tab1:
     st.subheader("Customer Support Ticket Analysis")
-    st.markdown("Submit customer queries for real-time topic classification, intent detection, NER, and sentiment scoring.")
+    st.markdown(
+        "Submit customer queries for real-time topic classification, intent detection, NER, and sentiment scoring."
+    )
 
     initial_text = ""
     if preset in preset_samples:
@@ -215,12 +224,17 @@ with tab1:
 
     col_btn, col_info = st.columns([1, 4])
     with col_btn:
-        analyze_clicked = st.button("🚀 Analyze Ticket", type="primary", use_container_width=True)
+        analyze_clicked = st.button(
+            "🚀 Analyze Ticket", type="primary", use_container_width=True
+        )
 
     if analyze_clicked and input_text.strip():
         with st.spinner("Processing through local NLP and vector pipeline..."):
             try:
-                payload = {"text": input_text.strip(), "metadata": {"source": "streamlit_ui"}}
+                payload = {
+                    "text": input_text.strip(),
+                    "metadata": {"source": "streamlit_ui"},
+                }
                 res = requests.post(f"{api_url}/analyze", json=payload, timeout=15)
 
                 if res.status_code == 200:
@@ -263,7 +277,11 @@ with tab1:
                         sent_info = data.get("sentiment", {})
                         s_label = sent_info.get("sentiment", "neutral").upper()
                         s_score = sent_info.get("score", 0.0)
-                        s_color = "#10b981" if s_score > 0.05 else ("#ef4444" if s_score < -0.05 else "#64748b")
+                        s_color = (
+                            "#10b981"
+                            if s_score > 0.05
+                            else ("#ef4444" if s_score < -0.05 else "#64748b")
+                        )
                         st.markdown(
                             f"""
                             <div class="metric-card">
@@ -306,10 +324,14 @@ with tab1:
                                 txt = ent.get("text", "")
                                 src = ent.get("source", "regex")
                                 css_type = "entity-misc"
-                                if "MONEY" in lbl: css_type = "entity-money"
-                                elif "ORDER" in lbl: css_type = "entity-order"
-                                elif "EMAIL" in lbl: css_type = "entity-email"
-                                elif "DATE" in lbl: css_type = "entity-date"
+                                if "MONEY" in lbl:
+                                    css_type = "entity-money"
+                                elif "ORDER" in lbl:
+                                    css_type = "entity-order"
+                                elif "EMAIL" in lbl:
+                                    css_type = "entity-email"
+                                elif "DATE" in lbl:
+                                    css_type = "entity-date"
 
                                 html_chips += f"""<span class="entity-chip {css_type}"><b>{lbl}:</b>&nbsp;{txt}&nbsp;<small style="opacity:0.7">({src})</small></span>"""
                             st.markdown(html_chips, unsafe_allow_html=True)
@@ -319,7 +341,12 @@ with tab1:
                         st.markdown("#### 🔑 TF-IDF Keywords")
                         keywords = data.get("keywords", [])
                         if keywords:
-                            kw_html = "".join([f"""<span class="keyword-chip"># {kw}</span>""" for kw in keywords])
+                            kw_html = "".join(
+                                [
+                                    f"""<span class="keyword-chip"># {kw}</span>"""
+                                    for kw in keywords
+                                ]
+                            )
                             st.markdown(kw_html, unsafe_allow_html=True)
                         else:
                             st.info("No keywords extracted.")
@@ -329,14 +356,19 @@ with tab1:
                         evidence = data.get("evidence_sentences", [])
                         if evidence:
                             for ev in evidence:
-                                st.markdown(f"""<div class="evidence-quote">"{ev}"</div>""", unsafe_allow_html=True)
+                                st.markdown(
+                                    f"""<div class="evidence-quote">"{ev}"</div>""",
+                                    unsafe_allow_html=True,
+                                )
                         else:
                             st.info("No specific evidence sentences isolated.")
 
                         with st.expander("🔍 Normalized Text & Pipeline Details"):
                             st.write(f"**Cleaned Text:** `{data.get('cleaned_text')}`")
                             st.write(f"**Request ID:** `{data.get('request_id')}`")
-                            st.write(f"**LLM Fallback Used:** `{data.get('llm_fallback_used')}`")
+                            st.write(
+                                f"**LLM Fallback Used:** `{data.get('llm_fallback_used')}`"
+                            )
 
                 else:
                     st.error(f"Error {res.status_code}: {res.text}")
@@ -349,7 +381,9 @@ with tab1:
 # ------------------------------------------------------------------------------
 with tab2:
     st.subheader("Semantic Similarity & Duplicate Detection")
-    st.markdown("Compare two customer support utterances using SentenceTransformers dense vector embeddings.")
+    st.markdown(
+        "Compare two customer support utterances using SentenceTransformers dense vector embeddings."
+    )
 
     s_col1, s_col2 = st.columns(2)
     with s_col1:
@@ -370,7 +404,9 @@ with tab2:
             with st.spinner("Computing cosine similarity..."):
                 try:
                     payload = {"text_a": text_a.strip(), "text_b": text_b.strip()}
-                    res = requests.post(f"{api_url}/similarity", json=payload, timeout=10)
+                    res = requests.post(
+                        f"{api_url}/similarity", json=payload, timeout=10
+                    )
                     if res.status_code == 200:
                         sim_data = res.json()
                         score = sim_data.get("similarity_score", 0.0)
@@ -381,7 +417,11 @@ with tab2:
 
                         r1, r2 = st.columns(2)
                         with r1:
-                            st.metric("Cosine Similarity Score", f"{score:.4f}", f"{score * 100:.1f}% Match")
+                            st.metric(
+                                "Cosine Similarity Score",
+                                f"{score:.4f}",
+                                f"{score * 100:.1f}% Match",
+                            )
                         with r2:
                             if is_duplicate:
                                 st.error("⚠️ DUPLICATE DETECTED (Similarity >= 0.85)")
@@ -397,16 +437,23 @@ with tab2:
 # ------------------------------------------------------------------------------
 with tab3:
     st.subheader("Controlled 10-Topic Taxonomy")
-    st.markdown("Explore the customer support topics and example utterances indexed in the Qdrant vector database.")
+    st.markdown(
+        "Explore the customer support topics and example utterances indexed in the Qdrant vector database."
+    )
 
     try:
         from app.nlp.topics import get_available_topics
+
         topics = get_available_topics()
         if topics:
             for item in topics:
-                with st.expander(f"📌 {item['name']} ({len(item.get('examples', []))} Anchor Examples)"):
+                with st.expander(
+                    f"📌 {item['name']} ({len(item.get('examples', []))} Anchor Examples)"
+                ):
                     st.markdown(f"**Description:** {item.get('description')}")
-                    st.markdown(f"**Associated Intents:** `{', '.join(item.get('intents', []))}`")
+                    st.markdown(
+                        f"**Associated Intents:** `{', '.join(item.get('intents', []))}`"
+                    )
                     st.markdown("**Anchor Training Sentences:**")
                     for ex in item.get("examples", []):
                         st.markdown(f"- {ex}")
@@ -420,7 +467,9 @@ with tab3:
 # ------------------------------------------------------------------------------
 with tab4:
     st.subheader("Document Ingestion & Text Extraction")
-    st.markdown("Upload support invoices, receipts, or ticket logs in PDF or DOCX format.")
+    st.markdown(
+        "Upload support invoices, receipts, or ticket logs in PDF or DOCX format."
+    )
 
     uploaded_file = st.file_uploader("Choose a file", type=["pdf", "docx"])
 
@@ -431,17 +480,31 @@ with tab4:
             if st.button("📥 Extract Text", type="primary", use_container_width=True):
                 with st.spinner("Parsing document structure..."):
                     try:
-                        files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type)}
-                        res = requests.post(f"{api_url}/extract", files=files, timeout=15)
+                        files = {
+                            "file": (uploaded_file.name, file_bytes, uploaded_file.type)
+                        }
+                        res = requests.post(
+                            f"{api_url}/extract", files=files, timeout=15
+                        )
                         if res.status_code == 200:
                             ext_data = res.json()
-                            st.session_state["extracted_text"] = ext_data.get("extracted_text", "")
+                            st.session_state["extracted_text"] = ext_data.get(
+                                "extracted_text", ""
+                            )
 
-                            st.success(f"Extracted {ext_data.get('word_count')} words from {ext_data.get('filename')}!")
-                            st.text_area("Extracted Document Content", value=st.session_state["extracted_text"], height=200)
+                            st.success(
+                                f"Extracted {ext_data.get('word_count')} words from {ext_data.get('filename')}!"
+                            )
+                            st.text_area(
+                                "Extracted Document Content",
+                                value=st.session_state["extracted_text"],
+                                height=200,
+                            )
 
                             if st.button("➡️ Send to Ticket Analyzer"):
-                                st.info("Text copied! Switch to the 'Ticket Analyzer' tab to inspect.")
+                                st.info(
+                                    "Text copied! Switch to the 'Ticket Analyzer' tab to inspect."
+                                )
                         else:
                             st.error(f"Extraction failed: {res.text}")
                     except Exception as e:
@@ -452,8 +515,7 @@ with tab4:
 # ------------------------------------------------------------------------------
 with tab5:
     st.subheader("System Architecture & Processing Pipeline")
-    st.markdown(
-        """
+    st.markdown("""
         The **NLP Document Intelligence Gateway** follows a high-throughput, dual-brain architecture designed to minimize latency and external LLM costs:
 
         ```mermaid
@@ -474,14 +536,40 @@ with tab5:
             
             C & E & F --> G[Unified Structured JSON Response]
         ```
-        """
-    )
+        """)
 
     st.markdown("### Performance & Efficiency Specs")
-    st.table([
-        {"Component": "Local Text Cleaning", "Latency": "< 2ms", "Cost": "$0.00", "Engine": "Python regex"},
-        {"Component": "Linguistic & POS Analysis", "Latency": "< 15ms", "Cost": "$0.00", "Engine": "spaCy en_core_web_sm"},
-        {"Component": "TF-IDF Keywords", "Latency": "< 5ms", "Cost": "$0.00", "Engine": "scikit-learn"},
-        {"Component": "Vector Embedding & Search", "Latency": "< 20ms", "Cost": "$0.00", "Engine": "all-MiniLM-L6-v2 + Qdrant"},
-        {"Component": "LLM Fallback (Ambiguous Only)", "Latency": "~500ms", "Cost": "$0.0001", "Engine": "Gemini 1.5 Flash / GPT-4o-mini"},
-    ])
+    st.table(
+        [
+            {
+                "Component": "Local Text Cleaning",
+                "Latency": "< 2ms",
+                "Cost": "$0.00",
+                "Engine": "Python regex",
+            },
+            {
+                "Component": "Linguistic & POS Analysis",
+                "Latency": "< 15ms",
+                "Cost": "$0.00",
+                "Engine": "spaCy en_core_web_sm",
+            },
+            {
+                "Component": "TF-IDF Keywords",
+                "Latency": "< 5ms",
+                "Cost": "$0.00",
+                "Engine": "scikit-learn",
+            },
+            {
+                "Component": "Vector Embedding & Search",
+                "Latency": "< 20ms",
+                "Cost": "$0.00",
+                "Engine": "all-MiniLM-L6-v2 + Qdrant",
+            },
+            {
+                "Component": "LLM Fallback (Ambiguous Only)",
+                "Latency": "~500ms",
+                "Cost": "$0.0001",
+                "Engine": "Gemini 1.5 Flash / GPT-4o-mini",
+            },
+        ]
+    )

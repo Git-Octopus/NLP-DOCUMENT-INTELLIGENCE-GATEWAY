@@ -26,21 +26,32 @@ class OpenAIProvider(BaseLLMProvider):
         return "openai"
 
     def is_available(self) -> bool:
-        return bool(self._api_key and self._api_key.strip() and self._client is not None)
+        return bool(
+            self._api_key and self._api_key.strip() and self._client is not None
+        )
 
     def _init_client(self):
         if not self._api_key or not self._api_key.strip():
-            logger.info("OpenAI API key not configured. OpenAI provider running in fallback mock mode.")
+            logger.info(
+                "OpenAI API key not configured. OpenAI provider running in fallback mock mode."
+            )
             return
         try:
             from openai import OpenAI
+
             self._client = OpenAI(api_key=self._api_key)
-            logger.info(f"OpenAI client initialized successfully with model: {self._model_name}")
+            logger.info(
+                f"OpenAI client initialized successfully with model: {self._model_name}"
+            )
         except Exception as e:
-            logger.warning(f"Failed to initialize OpenAI client ({e}). Provider will use heuristics.")
+            logger.warning(
+                f"Failed to initialize OpenAI client ({e}). Provider will use heuristics."
+            )
             self._client = None
 
-    def _call_chat(self, system_prompt: str, user_prompt: str, response_json: bool = True) -> Optional[str]:
+    def _call_chat(
+        self, system_prompt: str, user_prompt: str, response_json: bool = True
+    ) -> Optional[str]:
         if not self.is_available():
             return None
         try:
@@ -84,7 +95,12 @@ class OpenAIProvider(BaseLLMProvider):
         available_taxonomy: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         candidates_str = (
-            ", ".join([f"{c.get('topic')} (score: {c.get('score', 0.0):.2f})" for c in candidate_topics])
+            ", ".join(
+                [
+                    f"{c.get('topic')} (score: {c.get('score', 0.0):.2f})"
+                    for c in candidate_topics
+                ]
+            )
             or "None"
         )
         system_prompt = (
@@ -104,7 +120,9 @@ Return strictly JSON."""
                 "topic_id": parsed.get("topic_id", "general_support"),
                 "intent": parsed.get("intent", "general_inquiry"),
                 "confidence": float(parsed.get("confidence", 0.85)),
-                "reasoning": parsed.get("reasoning", "Resolved by OpenAI fallback reasoning."),
+                "reasoning": parsed.get(
+                    "reasoning", "Resolved by OpenAI fallback reasoning."
+                ),
             }
         return self._heuristic_resolve(text, candidate_topics)
 
@@ -114,7 +132,12 @@ Return strictly JSON."""
         existing_entities: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         existing_str = (
-            ", ".join([f"{e.get('label')}: {e.get('text')}" for e in (existing_entities or [])])
+            ", ".join(
+                [
+                    f"{e.get('label')}: {e.get('text')}"
+                    for e in (existing_entities or [])
+                ]
+            )
             or "None"
         )
         system_prompt = (
@@ -152,7 +175,9 @@ Return strictly JSON."""
 
         return self._heuristic_domain_entities(text)
 
-    def summarize_text(self, text: str, max_length: Optional[int] = 150) -> Dict[str, Any]:
+    def summarize_text(
+        self, text: str, max_length: Optional[int] = 150
+    ) -> Dict[str, Any]:
         system_prompt = (
             f"Summarize this support document into a paragraph under {max_length or 150} words with "
             "2-4 key bullet points. Return JSON with keys 'summary' and 'key_points'."
@@ -170,7 +195,7 @@ Return strictly JSON."""
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
         system_prompt = (
-            'Analyze sentiment polarity of the message. Return JSON with keys '
+            "Analyze sentiment polarity of the message. Return JSON with keys "
             '\'sentiment\' ("positive", "neutral", or "negative") and \'score\' (float from -1.0 to 1.0).'
         )
         user_prompt = f'Text: "{text}"'
@@ -184,7 +209,9 @@ Return strictly JSON."""
             }
         return self._heuristic_sentiment(text)
 
-    def _heuristic_resolve(self, text: str, candidate_topics: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _heuristic_resolve(
+        self, text: str, candidate_topics: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         if candidate_topics:
             best = candidate_topics[0]
             return {
@@ -205,7 +232,15 @@ Return strictly JSON."""
     def _heuristic_domain_entities(self, text: str) -> List[Dict[str, Any]]:
         entities = []
         lower = text.lower()
-        for pm in ["credit card", "debit card", "visa", "mastercard", "paypal", "apple pay", "upi"]:
+        for pm in [
+            "credit card",
+            "debit card",
+            "visa",
+            "mastercard",
+            "paypal",
+            "apple pay",
+            "upi",
+        ]:
             if pm in lower:
                 idx = lower.find(pm)
                 entities.append(
@@ -223,9 +258,12 @@ Return strictly JSON."""
     def _heuristic_summarize(self, text: str) -> Dict[str, Any]:
         sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
         summary = " ".join(sentences[:2]) if sentences else text[:150]
-        key_points = [s for s in sentences[:3]] if sentences else ["Customer support inquiry."]
+        key_points = (
+            [s for s in sentences[:3]] if sentences else ["Customer support inquiry."]
+        )
         return {"summary": summary, "key_points": key_points}
 
     def _heuristic_sentiment(self, text: str) -> Dict[str, Any]:
         from app.nlp.sentiment import analyze_sentiment_local
+
         return analyze_sentiment_local(text)

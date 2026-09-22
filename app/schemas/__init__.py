@@ -5,6 +5,7 @@ from app.schemas.analysis import (
     IntentMatch,
     SentimentAnalysis,
     DuplicateCheck,
+    DocumentMetadata,
     AnalyzeRequest,
     AnalyzeResponse,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "IntentMatch",
     "SentimentAnalysis",
     "DuplicateCheck",
+    "DocumentMetadata",
     "AnalyzeRequest",
     "AnalyzeResponse",
     "SimilarityRequest",

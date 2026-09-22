@@ -4,6 +4,8 @@ from enum import Enum
 
 
 class SentimentEnum(str, Enum):
+    """Enumeration of possible text sentiment classifications."""
+
     POSITIVE = "positive"
     NEUTRAL = "neutral"
     NEGATIVE = "negative"
@@ -37,6 +39,8 @@ class ExtractedEntity(BaseModel):
 
 
 class TopicMatch(BaseModel):
+    """Schema representing the classification topic match and confidence score."""
+
     topic: str = Field(
         ..., description="Identified topic from topics.yaml, e.g. 'Billing & Refunds'"
     )
@@ -59,6 +63,8 @@ class TopicMatch(BaseModel):
 
 
 class IntentMatch(BaseModel):
+    """Schema representing the detected user intent and resolution method."""
+
     intent: str = Field(..., description="Detected user intent, e.g. 'request_refund'")
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0"
@@ -79,6 +85,8 @@ class IntentMatch(BaseModel):
 
 
 class SentimentAnalysis(BaseModel):
+    """Schema representing the overall text sentiment and numerical polarity score."""
+
     sentiment: SentimentEnum = Field(
         ..., description="Overall sentiment classification"
     )
@@ -95,6 +103,8 @@ class SentimentAnalysis(BaseModel):
 
 
 class DuplicateCheck(BaseModel):
+    """Schema containing result metrics for message deduplication checks."""
+
     is_duplicate: bool = Field(
         False, description="Whether this message duplicates an earlier indexed message"
     )
@@ -116,10 +126,25 @@ class DuplicateCheck(BaseModel):
     )
 
 
+class DocumentMetadata(BaseModel):
+    """Schema containing structural and file metadata extracted from uploaded documents."""
+
+    filename: Optional[str] = Field(None, description="Uploaded document filename")
+    file_type: Optional[str] = Field(
+        None, description="File type extension, e.g. 'pdf' or 'docx'"
+    )
+    word_count: Optional[int] = Field(None, description="Total word count in document")
+    char_count: Optional[int] = Field(
+        None, description="Total character count in document"
+    )
+
+
 # --- REQUEST / RESPONSE FOR /analyze ---
 
 
 class AnalyzeRequest(BaseModel):
+    """Incoming request payload schema for raw support text analysis."""
+
     text: str = Field(
         ..., min_length=3, description="Unstructured customer support text to analyze"
     )
@@ -139,11 +164,16 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
+    """Outbound response payload schema containing complete analytical output."""
+
     request_id: Optional[str] = Field(
         None, description="Unique ID for this analysis request"
     )
     original_text: str = Field(..., description="Original customer input text")
     cleaned_text: str = Field(..., description="Preprocessed and normalized text")
+    doc_metadata: Optional[DocumentMetadata] = Field(
+        None, description="Optional document metadata if extracted from file"
+    )
     topic: TopicMatch = Field(..., description="Topic categorization result")
     intent: IntentMatch = Field(..., description="Intent detection result")
     entities: List[ExtractedEntity] = Field(
@@ -151,17 +181,17 @@ class AnalyzeResponse(BaseModel):
     )
     keywords: List[str] = Field(
         default_factory=list,
-        description="Top keywords / key phrases extracted via TF-IDF & linguistic analysis",
+        description="Top keywords / key phrases extracted via TF-IDF",
     )
     sentiment: SentimentAnalysis = Field(..., description="Sentiment analysis output")
     evidence_sentences: List[str] = Field(
-        default_factory=list, description="Key sentences justifying the intent/topic"
+        default_factory=list, description="Key sentences justifying intent/topic"
     )
     duplicate_info: DuplicateCheck = Field(
         ..., description="Duplicate message detection result"
     )
     llm_fallback_used: bool = Field(
-        False, description="True if LLM was invoked for topic/entity ambiguity"
+        False, description="True if LLM was invoked for fallback"
     )
 
     model_config = ConfigDict(
@@ -170,6 +200,12 @@ class AnalyzeResponse(BaseModel):
                 "request_id": "req-dummy-123456",
                 "original_text": "Hello, I was charged $49.99 twice on my invoice #INV-9821. Please issue a refund to john@example.com immediately.",
                 "cleaned_text": "hello i was charged $49.99 twice on my invoice #inv-9821 please issue a refund to john@example.com immediately",
+                "doc_metadata": {
+                    "filename": "ticket_doc.pdf",
+                    "file_type": "pdf",
+                    "word_count": 18,
+                    "char_count": 115,
+                },
                 "topic": {
                     "topic": "Billing & Refunds",
                     "confidence": 0.94,

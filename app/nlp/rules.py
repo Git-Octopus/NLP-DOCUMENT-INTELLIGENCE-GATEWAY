@@ -18,15 +18,7 @@ REGEX_PATTERNS = {
         re.IGNORECASE,
     ),
     "ORDER_ID": re.compile(
-        r"(?:#|ORD[-_]|ORDER[-_]?|TKT[-_]|TICKET[-_]?|INV[-_]|INVOICE[-_]?|TXN[-_]|TRANSACTION[-_]?|ID:\s?)[A-Z0-9_-]{3,18}\b",
-        re.IGNORECASE,
-    ),
-    "TRACKING_NUMBER": re.compile(
-        r"\b(?:TRK[-_]|TRACK[-_]?|AWB[-_]?|1Z)[A-Z0-9]{4,20}\b",
-        re.IGNORECASE,
-    ),
-    "ERROR_CODE": re.compile(
-        r"\b(?:ERR[-_][0-9]{3,4}|ERROR\s?[0-9]{3,4}|HTTP\s?(?:400|401|403|404|500|502|503|504))\b",
+        r"(?:#|ORD[-_]|ORDER[-_]?|TKT[-_]|TICKET[-_]?|ID:\s?)[A-Z0-9_-]{3,15}\b",
         re.IGNORECASE,
     ),
     "DATE": re.compile(
@@ -42,9 +34,7 @@ def extract_rule_entities(text: str) -> List[Dict[str, Any]]:
     - Emails: RFC 5322 regex pattern
     - Phone Numbers: International and local formats
     - Money/Currency: Amounts like $49.99, USD 50, ₹500, €12.50
-    - Order/Ticket/Invoice IDs: Alpha-numeric patterns like #ORD-12345, TKT-9982, INV-4492
-    - Tracking Numbers: TRK-9921, AWB88129, 1Z999
-    - Error Codes: ERR-502, HTTP 404, ERROR 500
+    - Order/Ticket IDs: Alpha-numeric patterns like #ORD-12345, TKT-9982, ID: 88392
     - Dates: Formats like YYYY-MM-DD, DD/MM/YYYY, Jan 15, 2026
 
     Returns list of dicts formatted as:
@@ -61,16 +51,12 @@ def extract_rule_entities(text: str) -> List[Dict[str, Any]]:
             start_idx = match.start()
             end_idx = match.end()
 
-            # Refine specific ID labels
+            # Specific label refined for tickets vs order ids
             final_label = label
-            if label == "ORDER_ID":
-                upper = entity_str.upper()
-                if "TKT" in upper or "TICKET" in upper:
-                    final_label = "TICKET_ID"
-                elif "INV" in upper or "INVOICE" in upper:
-                    final_label = "INVOICE_ID"
-                elif "TXN" in upper or "TRANSACTION" in upper:
-                    final_label = "TRANSACTION_ID"
+            if label == "ORDER_ID" and (
+                "TKT" in entity_str.upper() or "TICKET" in entity_str.upper()
+            ):
+                final_label = "TICKET_ID"
 
             entities.append(
                 {
