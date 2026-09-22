@@ -7,6 +7,7 @@ from app.schemas import (
     IntentMatch,
     SentimentAnalysis,
     DuplicateCheck,
+    DocumentMetadata,
     AnalyzeRequest,
     AnalyzeResponse,
     SimilarityRequest,
@@ -79,10 +80,15 @@ def test_schema_analyze_request_and_response():
     assert len(req.text) >= 3
     assert req.metadata["channel"] == "chat"
 
+    doc_meta = DocumentMetadata(
+        filename="account_issue.pdf", file_type="pdf", word_count=7, char_count=42
+    )
+
     res = AnalyzeResponse(
         request_id="req-12345",
         original_text=req.text,
         cleaned_text="account locked after failed login attempts",
+        doc_metadata=doc_meta,
         topic=TopicMatch(topic="Account Access", confidence=0.91, resolved_by="qdrant"),
         intent=IntentMatch(
             intent="unlock_account", confidence=0.87, resolved_by="rules"
@@ -97,6 +103,8 @@ def test_schema_analyze_request_and_response():
     assert res.request_id == "req-12345"
     assert res.topic.topic == "Account Access"
     assert res.sentiment.sentiment == SentimentEnum.NEGATIVE
+    assert res.doc_metadata.filename == "account_issue.pdf"
+    assert res.doc_metadata.word_count == 7
 
 
 def test_schema_similarity():

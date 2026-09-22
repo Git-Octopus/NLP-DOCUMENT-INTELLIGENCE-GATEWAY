@@ -23,11 +23,7 @@ def test_extract_text_from_docx():
     """Verify that extract_text_from_docx correctly extracts paragraph text."""
     sample_text = "Hello, this is a test support ticket in DOCX format."
     docx_bytes = create_dummy_docx_bytes(sample_text)
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     extracted = extract_text_from_docx(docx_bytes)
     assert sample_text in extracted
 
@@ -56,14 +52,6 @@ def test_extract_text_from_pdf():
         b"355\n"
         b"%%EOF"
     )
-<<<<<<< HEAD
-    
-    extracted = extract_text_from_pdf(fake_pdf_bytes)
-    assert "Sample PDF Text" in extracted
-
-
-=======
 
     extracted = extract_text_from_pdf(fake_pdf_bytes)
     assert "Sample PDF Text" in extracted
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

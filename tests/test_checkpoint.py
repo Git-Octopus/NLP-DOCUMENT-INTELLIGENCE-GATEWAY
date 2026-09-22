@@ -28,9 +28,6 @@ def test_day14_extract_and_validation_checkpoint():
     # 1. Valid extraction
     response = client.post(
         "/extract",
-<<<<<<< HEAD
-        files={"file": ("day14_test.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
-=======
         files={
             "file": (
                 "day14_test.docx",
@@ -38,7 +35,6 @@ def test_day14_extract_and_validation_checkpoint():
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             )
         },
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     )
     assert response.status_code == 200
     data = response.json()
@@ -48,13 +44,6 @@ def test_day14_extract_and_validation_checkpoint():
 
     # 2. Empty file handling
     empty_res = client.post(
-<<<<<<< HEAD
-        "/extract",
-        files={"file": ("empty.pdf", b"", "application/pdf")}
-    )
-    assert empty_res.status_code == 400
-=======
         "/extract", files={"file": ("empty.pdf", b"", "application/pdf")}
     )
     assert empty_res.status_code == 400
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

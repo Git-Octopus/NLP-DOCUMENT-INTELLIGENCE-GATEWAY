@@ -10,10 +10,7 @@ from app.services.database import Base
 from app.services.crud import create_analysis, get_analysis_by_request_id, list_analyses
 from app.schemas.analysis import (
     AnalyzeResponse,
-<<<<<<< HEAD
     DocumentMetadata,
-=======
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     TopicMatch,
     IntentMatch,
     ExtractedEntity,
@@ -22,24 +19,13 @@ from app.schemas.analysis import (
     DuplicateCheck,
 )
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
 @pytest.fixture(scope="function")
 def db_session():
     """
     Creates an in-memory SQLite database session for testing.
     Ensures isolated state per test function.
     """
-<<<<<<< HEAD
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
-    # Create all tables in memory
-    Base.metadata.create_all(bind=engine)
-    
-=======
     engine = create_engine(
         "sqlite:///:memory:", connect_args={"check_same_thread": False}
     )
@@ -48,19 +34,14 @@ def db_session():
     # Create all tables in memory
     Base.metadata.create_all(bind=engine)
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
-<<<<<<< HEAD
-        
-=======
 
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
 def test_create_and_retrieve_analysis(db_session):
     """Verify that a full AnalyzeResponse object is correctly saved and retrieved from SQLite."""
     dummy_response = AnalyzeResponse(
@@ -105,11 +86,7 @@ def test_create_and_retrieve_analysis(db_session):
         ),
         llm_fallback_used=False,
     )
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     # 1. Insert record
     saved_record = create_analysis(db_session, dummy_response)
     assert saved_record.id is not None
@@ -123,11 +100,7 @@ def test_create_and_retrieve_analysis(db_session):
     assert saved_record.entities[0].text == "$49.99"
     assert saved_record.entities[0].label == "MONEY"
     assert saved_record.entities[1].text == "john@example.com"
-<<<<<<< HEAD
-    assert saved_record.entities[1].label == "EMAIL"                        
-=======
     assert saved_record.entities[1].label == "EMAIL"
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     assert len(saved_record.evidence) == 1
     assert saved_record.evidence[0].sentence == "I was charged $49.99 twice."
 
@@ -141,7 +114,7 @@ def test_create_and_retrieve_analysis(db_session):
     all_records = list_analyses(db_session)
     assert len(all_records) == 1
     assert all_records[0].request_id == "test-req-001"
-<<<<<<< HEAD
+
 
 def test_create_analysis_with_doc_metadata(db_session):
     """Verify that file metadata (filename, file_type, word_count, char_count) is persisted."""
@@ -190,5 +163,3 @@ def test_create_analysis_with_doc_metadata(db_session):
     assert retrieved.file_type == "docx"
     assert retrieved.word_count == 5
     assert retrieved.char_count == 35
-=======
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

@@ -44,10 +44,7 @@ def db_session():
 @pytest.fixture
 def client(db_session):
     """Override FastAPI get_db dependency to use the isolated test session."""
-<<<<<<< HEAD
-=======
 
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0
     def _override_get_db():
         try:
             yield db_session
@@ -57,8 +54,4 @@ def client(db_session):
     app.dependency_overrides[get_db] = _override_get_db
     with TestClient(app) as test_client:
         yield test_client
-<<<<<<< HEAD
     app.dependency_overrides.clear()
-=======
-    app.dependency_overrides.clear()
->>>>>>> 69ed16c72529dab7f4bc2a5a87c1f156b9c04ce0

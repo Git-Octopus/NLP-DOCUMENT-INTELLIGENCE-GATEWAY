@@ -12,6 +12,8 @@ from app.services.extractors import (
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB limit
 
+router = APIRouter(tags=["Document Extraction"])
+
 
 @router.post(
     "/extract",
