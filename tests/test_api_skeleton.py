@@ -52,7 +52,9 @@ def test_health_check_endpoint():
 
 def test_analyze_dummy_endpoint_success():
     """Verify POST /analyze returns 200 and schema-compliant AnalyzeResponse."""
-    test_text = "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
+    test_text = (
+        "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
+    )
     response = client.post(
         "/analyze",
         data={"text": test_text},
@@ -156,13 +158,13 @@ def test_extract_dummy_endpoint_docx():
     """Verify POST /extract with DOCX upload returns 200 and schema-compliant ExtractResponse."""
     # Import docx to create a valid DOCX file
     import docx
-    
+
     doc = docx.Document()
     doc.add_paragraph("This is a test document for extraction.")
     buffer = io.BytesIO()
     doc.save(buffer)
     fake_docx_bytes = buffer.getvalue()
-    
+
     files = {
         "file": (
             "ticket_log.docx",

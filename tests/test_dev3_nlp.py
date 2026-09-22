@@ -80,7 +80,9 @@ def test_cosine_similarity_computation():
     assert 0.0 <= sim_similar <= 1.0
 
 
-@pytest.mark.skip(reason="Requires Qdrant configuration and TOPICS_CONFIG_PATH in settings")
+@pytest.mark.skip(
+    reason="Requires Qdrant configuration and TOPICS_CONFIG_PATH in settings"
+)
 def test_vector_store_in_memory_init():
     """Verify Qdrant client initializes (in-memory or live) and collections are created."""
     q_client = get_qdrant_client()
@@ -99,6 +101,7 @@ def test_topics_taxonomy_loading():
     """Verify config/topics.yaml loads correctly with all 10 core customer support topics."""
     # Load with explicit path to avoid settings dependency
     import os
+
     config_path = os.path.join(os.path.dirname(__file__), "..", "config", "topics.yaml")
     topics_cfg = load_topics_config(config_path)
     assert "topics" in topics_cfg
@@ -121,6 +124,7 @@ def test_seed_topics_to_vector_store():
     """Verify that seed_topics_to_vector_store embeds and indexes topics into Qdrant."""
     # Load with explicit path to avoid settings dependency
     import os
+
     config_path = os.path.join(os.path.dirname(__file__), "..", "config", "topics.yaml")
     seeded_count = seed_topics_to_vector_store(config_path)
     assert seeded_count > 0
@@ -130,8 +134,9 @@ def test_seed_topics_to_vector_store():
 def test_match_topic_and_intent_accuracy():
     """Verify topic and intent classification on clear customer utterances."""
     import os
+
     config_path = os.path.join(os.path.dirname(__file__), "..", "config", "topics.yaml")
-    
+
     refund_text = (
         "I was charged $49.99 twice on my invoice. Please refund to john@example.com."
     )
