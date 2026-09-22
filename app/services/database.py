@@ -1,7 +1,3 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -14,7 +10,7 @@ connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith(
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args=connect_args,
-    echo=settings.DEBUG,
+    echo=False,
 )
 
 # Session factory for managing DB operations
@@ -23,6 +19,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for ORM models
 Base = declarative_base()
 
+
 def get_db():
     """FastAPI dependency to provide a database session per request."""
     db = SessionLocal()
@@ -30,4 +27,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

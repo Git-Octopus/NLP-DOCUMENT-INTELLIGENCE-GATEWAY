@@ -3,15 +3,12 @@ SQLAlchemy ORM models defining the database storage schemas for text analysis,
 document metadata, extracted entities, and evidence keyphrases.
 """
 
-import os
-import sys
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from app.services.database import Base
 
-from app.services.database import Base, engine
 
 class AnalysisModel(Base):
     """
@@ -53,10 +50,10 @@ class AnalysisModel(Base):
     # Relationships to child tables
     entities = relationship("EntityModel", back_populates="analysis", cascade="all, delete-orphan")
     evidence = relationship("EvidenceModel", back_populates="analysis", cascade="all, delete-orphan")
-    
+
+
 class EntityModel(Base):
-    """"Child table storing individual named entities linked to a primary analysis record."""
-    
+    """Child table storing individual named entities linked to a primary analysis record."""
     __tablename__ = "entities"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -64,13 +61,13 @@ class EntityModel(Base):
     
     text = Column(String, nullable=False)
     label = Column(String, nullable=False)
-    source = Column(String, nullable=True)  # e.g., 'regex', 'spacy', 'llm'
+    source = Column(String, nullable=True)
     start_char = Column(Integer, nullable=True)
     end_char = Column(Integer, nullable=True)
 
-    # Many-to-one relationship back to parent analysis table
     analysis = relationship("AnalysisModel", back_populates="entities")
-    
+
+
 class EvidenceModel(Base):
     """Stores key evidence sentences matching extracted intent/topics."""
     __tablename__ = "evidence"
@@ -81,4 +78,3 @@ class EvidenceModel(Base):
     sentence = Column(Text, nullable=False)
 
     analysis = relationship("AnalysisModel", back_populates="evidence")
-    

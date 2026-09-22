@@ -45,7 +45,7 @@ def test_analyze_dummy_endpoint_success():
     """Verify POST /analyze returns 200 and schema-compliant AnalyzeResponse."""
     payload = {
         "text": "I was charged $49.99 twice on my invoice. Please refund to john@example.com.",
-        "metadata": {"ticket_id": "TCK-1001", "channel": "web"}
+        "metadata": {"ticket_id": "TCK-1001", "channel": "web"},
     }
     response = client.post("/analyze", json=payload)
     assert response.status_code == 200
@@ -61,7 +61,11 @@ def test_analyze_dummy_endpoint_success():
     assert validated.intent.resolved_by in ["rules", "qdrant", "llm_fallback"]
     assert isinstance(validated.entities, list)
     assert len(validated.entities) > 0
-    assert validated.sentiment.sentiment in [SentimentEnum.POSITIVE, SentimentEnum.NEUTRAL, SentimentEnum.NEGATIVE]
+    assert validated.sentiment.sentiment in [
+        SentimentEnum.POSITIVE,
+        SentimentEnum.NEUTRAL,
+        SentimentEnum.NEGATIVE,
+    ]
     assert -1.0 <= validated.sentiment.score <= 1.0
     assert isinstance(validated.keywords, list)
     assert isinstance(validated.evidence_sentences, list)
@@ -79,7 +83,7 @@ def test_similarity_dummy_endpoint_success():
     """Verify POST /similarity returns 200 and schema-compliant SimilarityResponse."""
     payload = {
         "text_a": "I want a refund for my order #123.",
-        "text_b": "Please give me a refund for order 123."
+        "text_b": "Please give me a refund for order 123.",
     }
     response = client.post("/similarity", json=payload)
     assert response.status_code == 200
@@ -118,7 +122,13 @@ def test_extract_dummy_endpoint_pdf():
 def test_extract_dummy_endpoint_docx():
     """Verify POST /extract with DOCX upload returns 200 and schema-compliant ExtractResponse."""
     fake_docx_bytes = io.BytesIO(b"PK dummy docx binary stream")
-    files = {"file": ("ticket_log.docx", fake_docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+    files = {
+        "file": (
+            "ticket_log.docx",
+            fake_docx_bytes,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    }
 
     response = client.post("/extract", files=files)
     assert response.status_code == 200
@@ -135,7 +145,7 @@ def test_summarize_dummy_endpoint_success():
     """Verify POST /summarize returns 200 and schema-compliant SummarizeResponse."""
     payload = {
         "text": "Hello support team, I have been unable to log in to my account since this morning due to error 500.",
-        "max_length": 50
+        "max_length": 50,
     }
     response = client.post("/summarize", json=payload)
     assert response.status_code == 200
@@ -157,11 +167,17 @@ def test_summarize_endpoint_validation_error():
 
 def test_api_v1_versioned_routes():
     """Verify that all endpoints are also accessible via /api/v1 prefix."""
-    res_analyze = client.post("/api/v1/analyze", json={"text": "Testing versioned prefix."})
+    res_analyze = client.post(
+        "/api/v1/analyze", json={"text": "Testing versioned prefix."}
+    )
     assert res_analyze.status_code == 200
 
-    res_similarity = client.post("/api/v1/similarity", json={"text_a": "Query one", "text_b": "Query two"})
+    res_similarity = client.post(
+        "/api/v1/similarity", json={"text_a": "Query one", "text_b": "Query two"}
+    )
     assert res_similarity.status_code == 200
 
-    res_summarize = client.post("/api/v1/summarize", json={"text": "Testing summarized versioned endpoint."})
+    res_summarize = client.post(
+        "/api/v1/summarize", json={"text": "Testing summarized versioned endpoint."}
+    )
     assert res_summarize.status_code == 200
