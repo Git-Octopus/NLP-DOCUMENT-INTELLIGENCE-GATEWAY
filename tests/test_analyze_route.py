@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import pytest
 import docx
 from fastapi.testclient import TestClient
 
@@ -8,8 +9,18 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.main import app
+from app.services.database import Base, engine
+from app.models import AnalysisModel
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def prepare_test_db():
+    """Create database tables before each test and drop them after."""
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
 
 
 def create_dummy_docx_bytes(text: str) -> bytes:
