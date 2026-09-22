@@ -12,7 +12,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.main import app
 from app.config import settings
-from app.nlp.embeddings import embed_text, embed_texts, compute_cosine_similarity
+from app.nlp.embeddings import (
+    get_embedding as embed_text,
+    get_embeddings_batch as embed_texts,
+    compute_cosine_similarity,
+)
 from app.nlp.vector_store import (
     get_qdrant_client,
     init_collections,
