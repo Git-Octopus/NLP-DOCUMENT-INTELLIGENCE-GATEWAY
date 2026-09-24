@@ -33,9 +33,10 @@ The **NLP Document Intelligence Gateway** processes raw customer support communi
 
 ```mermaid
 graph TD
+
     User([Customer Ticket / Uploaded PDF / DOCX]) --> Gateway[FastAPI Gateway :8000]
 
-    subgraph Tier 1: Local Classical NLP Engine
+    subgraph T1["Tier 1: Local Classical NLP Engine"]
         Gateway --> Preprocess[Text Normalization & Tokenization]
         Preprocess --> Linguistic[Lemmatization & POS Tagging]
         Preprocess --> NER[Hybrid NER: spaCy + Regex Extractors]
@@ -43,20 +44,23 @@ graph TD
         Preprocess --> Sentiment[Domain-Calibrated VADER & Support Lexicon]
     end
 
-    subgraph Tier 2: Dense Semantic Vector Store
+    subgraph T2["Tier 2: Dense Semantic Vector Store"]
         Preprocess --> Embed[Sentence Transformers: all-MiniLM-L6-v2 / Ollama nomic-embed-text]
         Embed --> Qdrant[(Qdrant Vector DB :6333)]
         Qdrant -->|Cosine >= 0.58| TopicMatch[Classified Topic & Intent]
         Qdrant -->|Deduplication| DuplicateCheck[Duplicate Check Flag]
     end
 
-    subgraph Tier 3: Adaptive LLM Fallback Brain
+    subgraph T3["Tier 3: Adaptive LLM Fallback Brain"]
         Qdrant -.->|Confidence < 0.58| LLM[Host Ollama: qwen2.5:7b / Google Gemini]
         Sentiment -.->|Ambiguous / Neutral| LLM
         LLM --> AmbiguityResolver[Nuanced Topic, Intent & Sentiment Resolution]
     end
 
-    Tier 1 --> Aggregator[Unified Structured Output Schema]
+    Linguistic --> Aggregator[Unified Structured Output Schema]
+    NER --> Aggregator
+    TFIDF --> Aggregator
+    Sentiment --> Aggregator
     TopicMatch --> Aggregator
     DuplicateCheck --> Aggregator
     AmbiguityResolver --> Aggregator
