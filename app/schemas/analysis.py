@@ -96,9 +96,19 @@ class SentimentAnalysis(BaseModel):
         le=1.0,
         description="Polarity score ranging from -1.0 (negative) to +1.0 (positive)",
     )
+    resolved_by: str = Field(
+        default="local_nlp",
+        description="Resolution method: 'local_nlp' or 'llm_fallback'",
+    )
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"sentiment": "negative", "score": -0.65}}
+        json_schema_extra={
+            "example": {
+                "sentiment": "negative",
+                "score": -0.65,
+                "resolved_by": "local_nlp",
+            }
+        }
     )
 
 
@@ -156,7 +166,10 @@ class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "text": "Hello, I was charged $49.99 twice on my invoice #INV-9821. Please issue a refund to john@example.com immediately.",
+                "text": (
+                    "Hello, I was charged $49.99 twice on my invoice #INV-9821. "
+                    "Please issue a refund to john@example.com immediately."
+                ),
                 "metadata": {"user_id": "usr_12345", "channel": "email"},
             }
         }
@@ -198,8 +211,14 @@ class AnalyzeResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "request_id": "req-dummy-123456",
-                "original_text": "Hello, I was charged $49.99 twice on my invoice #INV-9821. Please issue a refund to john@example.com immediately.",
-                "cleaned_text": "hello i was charged $49.99 twice on my invoice #inv-9821 please issue a refund to john@example.com immediately",
+                "original_text": (
+                    "Hello, I was charged $49.99 twice on my invoice #INV-9821. "
+                    "Please issue a refund to john@example.com immediately."
+                ),
+                "cleaned_text": (
+                    "hello i was charged $49.99 twice on my invoice #inv-9821 "
+                    "please issue a refund to john@example.com immediately"
+                ),
                 "doc_metadata": {
                     "filename": "ticket_doc.pdf",
                     "file_type": "pdf",

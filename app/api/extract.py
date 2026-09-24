@@ -1,6 +1,4 @@
-import os
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, UploadFile, File, HTTPException, status
 
 from app.schemas import ExtractResponse
 from app.config import settings

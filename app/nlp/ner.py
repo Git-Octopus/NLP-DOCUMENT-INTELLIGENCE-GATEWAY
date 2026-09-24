@@ -31,7 +31,9 @@ def extract_spacy_entities(text: str) -> List[Dict[str, Any]]:
                     "entity": ent_text,
                     "text": ent_text,  # schema compatibility
                     "label": ent.label_,
+                    "type": ent.label_,
                     "source": "spacy",
+                    "confidence": 0.85,
                     "start": ent.start_char,
                     "end": ent.end_char,
                     "start_char": ent.start_char,  # schema compatibility

@@ -20,6 +20,12 @@ from app.schemas.summarize import (
     SummarizeRequest,
     SummarizeResponse,
 )
+from app.schemas.models import (
+    ModelConfigRequest,
+    ModelConfigResponse,
+    OllamaStatus,
+    AvailableModelsResponse,
+)
 
 __all__ = [
     "SentimentEnum",
@@ -36,4 +42,8 @@ __all__ = [
     "ExtractResponse",
     "SummarizeRequest",
     "SummarizeResponse",
+    "ModelConfigRequest",
+    "ModelConfigResponse",
+    "OllamaStatus",
+    "AvailableModelsResponse",
 ]

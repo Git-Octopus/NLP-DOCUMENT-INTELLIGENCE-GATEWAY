@@ -9,6 +9,9 @@ import re
 import unicodedata
 from typing import List, Dict, Any, Optional, Union
 import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, SnowballStemmer
 
 # Auto-download required NLTK resources safely
 for resource in ["punkt", "punkt_tab", "stopwords"]:
@@ -21,10 +24,6 @@ for resource in ["punkt", "punkt_tab", "stopwords"]:
             nltk.download(resource, quiet=True)
         except Exception:
             pass
-
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer, SnowballStemmer
 
 _CONTRACTIONS = {
     "can't": "cannot",
@@ -124,6 +123,32 @@ def normalize_text(
     return cleaned
 
 
+def get_entity_preserving_text(text: str) -> str:
+    """
+    Normalizes excessive whitespace and newlines while strictly preserving
+    casing, currencies, emails, numbers, and identifiers required for entity extraction.
+    """
+    if not text:
+        return ""
+    # Normalize Unicode characters safely without removing accents/casing
+    text = unicodedata.normalize("NFC", text)
+    # Strip HTML tags if any
+    text = re.sub(r"<[^>]+>", " ", text)
+    # Standardize repeated whitespace/newlines
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\r\n|\r", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def get_analysis_text(text: str) -> str:
+    """
+    Produces normalized, lowercased, accent-stripped text suitable for
+    statistical NLP, BoW, and vocabulary matching.
+    """
+    return normalize_text(text, preserve_case=False, remove_accents=True)
+
+
 def tokenize_sentences(text: str, backend: str = "nltk") -> List[str]:
     """
     Sentence segmentation using NLTK sent_tokenize with regex fallback.
@@ -157,6 +182,7 @@ def tokenize_words(
             tokens = [
                 {
                     "text": token.text,
+                    "normalized": token.text.lower(),
                     "start_char": token.idx,
                     "end_char": token.idx + len(token.text),
                 }
@@ -164,7 +190,12 @@ def tokenize_words(
             ]
         except Exception:
             tokens = [
-                {"text": m.group(), "start_char": m.start(), "end_char": m.end()}
+                {
+                    "text": m.group(),
+                    "normalized": m.group().lower(),
+                    "start_char": m.start(),
+                    "end_char": m.end(),
+                }
                 for m in re.finditer(r"\b\w+\b|[^\w\s]", text)
             ]
     else:
@@ -183,6 +214,7 @@ def tokenize_words(
                 tokens.append(
                     {
                         "text": token,
+                        "normalized": token.lower(),
                         "start_char": start,
                         "end_char": end,
                     }
@@ -190,7 +222,12 @@ def tokenize_words(
                 search_from = end
         except Exception:
             tokens = [
-                {"text": m.group(), "start_char": m.start(), "end_char": m.end()}
+                {
+                    "text": m.group(),
+                    "normalized": m.group().lower(),
+                    "start_char": m.start(),
+                    "end_char": m.end(),
+                }
                 for m in re.finditer(r"\b\w+\b|[^\w\s]", text)
             ]
 
@@ -399,9 +436,13 @@ def preprocess_pipeline(text: str) -> Dict[str, Any]:
     stemmed = apply_stemming(filtered_words, stemmer_type="snowball")
 
     return {
+        "original_text": text,
         "cleaned_text": cleaned,
+        "normalized_text": normalize_text(text),
         "sentences": sentences,
+        "tokens": words,
         "raw_tokens": words,
         "filtered_tokens": filtered_words,
+        "stems": stemmed,
         "stemmed_tokens": stemmed,
     }

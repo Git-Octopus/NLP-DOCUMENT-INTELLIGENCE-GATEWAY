@@ -19,9 +19,7 @@ from typing import Dict, Any, List
 # Ensure project root in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from app.nlp.pipeline import run_local_nlp_pipeline
-from app.nlp.ner import extract_all_entities
-from app.nlp.sentiment import analyze_sentiment_local
+from app.nlp.pipeline import run_local_nlp_pipeline  # noqa: E402
 
 
 def load_dataset(dataset_path: str = None) -> List[Dict[str, Any]]:
@@ -135,9 +133,12 @@ def generate_markdown_report(metrics: Dict[str, Any], output_path: str = None):
 
 ## 3. Academic Defense Talking Points
 
-1. **Zero External Latency:** The entire pipeline executes locally in ~{metrics['avg_latency_ms']:.1f} ms per message without external network dependency or cloud fees.
-2. **Hybrid Entity Strategy:** Deterministic regex patterns capture structured entities (IDs, money, tracking numbers) with near 100% precision, while statistical spaCy captures contextual entities.
-3. **Robust Preprocessing:** Handles edge cases such as contraction expansion, noise symbol stripping, Unicode accent normalization, and dual NLTK/spaCy tokenization.
+1. **Zero External Latency:** The entire pipeline executes locally in ~{metrics['avg_latency_ms']:.1f} ms
+   per message without external network dependency or cloud fees.
+2. **Hybrid Entity Strategy:** Deterministic regex patterns capture structured entities
+   (IDs, money, tracking numbers) with near 100% precision, while statistical spaCy captures contextual entities.
+3. **Robust Preprocessing:** Handles edge cases such as contraction expansion, noise symbol stripping,
+   Unicode accent normalization, and dual NLTK/spaCy tokenization.
 """
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)

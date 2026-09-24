@@ -19,7 +19,9 @@ class ExtractResponse(BaseModel):
             "example": {
                 "filename": "support_ticket_invoice.pdf",
                 "file_type": "pdf",
-                "extracted_text": "Invoice #INV-9821\nCustomer: John Doe\nAmount: $49.99\nDescription: Duplicate charge inquiry.",
+                "extracted_text": (
+                    "Invoice #INV-9821\nCustomer: John Doe\nAmount: $49.99\nDescription: Duplicate charge inquiry."
+                ),
                 "word_count": 12,
                 "char_count": 82,
                 "error": None,

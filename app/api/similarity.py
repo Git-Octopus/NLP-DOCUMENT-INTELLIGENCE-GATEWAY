@@ -23,27 +23,11 @@ def _tfidf_fallback_similarity(text_a: str, text_b: str) -> float:
         return round(ratio, 4)
 
 
-def _tfidf_fallback_similarity(text_a: str, text_b: str) -> float:
-    """Fallback similarity calculator using scikit-learn TF-IDF / sequence matching."""
-    try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
-
-        vectorizer = TfidfVectorizer().fit_transform([text_a, text_b])
-        vectors = vectorizer.toarray()
-        score = float(cosine_similarity([vectors[0]], [vectors[1]])[0][0])
-        return round(max(0.0, min(1.0, score)), 4)
-    except Exception:
-        # Ultimate fallback using SequenceMatcher ratio
-        ratio = difflib.SequenceMatcher(None, text_a.lower(), text_b.lower()).ratio()
-        return round(ratio, 4)
-
-
 @router.post(
     "/similarity",
     response_model=SimilarityResponse,
     status_code=status.HTTP_200_OK,
-    summary="Compute Semantic Similarity (Dummy Skeleton for Day 2)",
+    summary="Compute Semantic Similarity",
     description="Compares two text snippets and computes cosine similarity between dense embeddings.",
 )
 async def compute_similarity(request: SimilarityRequest) -> SimilarityResponse:

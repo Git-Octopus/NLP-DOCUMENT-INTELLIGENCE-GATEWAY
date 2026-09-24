@@ -1,4 +1,3 @@
-import pytest
 from app.nlp.preprocess import (
     clean_text,
     expand_contractions,

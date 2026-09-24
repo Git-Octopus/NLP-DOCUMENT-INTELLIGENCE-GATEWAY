@@ -21,8 +21,19 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+def init_db():
+    """Ensures database tables are created."""
+    try:
+        from app import models  # noqa: F401
+
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+
+
 def get_db():
     """FastAPI dependency to provide a database session per request."""
+    init_db()
     db = SessionLocal()
     try:
         yield db
