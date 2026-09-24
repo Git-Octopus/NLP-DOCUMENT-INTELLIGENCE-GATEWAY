@@ -10,7 +10,7 @@ JSON even when external services are down.
 import logging
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 logger = logging.getLogger("gateway")
 
@@ -271,3 +271,46 @@ def safe_duplicate_check(text: str) -> Dict[str, Any]:
         logger.warning(f"semantic fallback: qdrant_unavailable ({e})")
 
     return fallback_duplicate_check(text)
+
+
+def safe_sentiment_match(text: str) -> Dict[str, Any]:
+    """
+    Computes sentiment polarity using local NLP (VADER + domain lexicon) first.
+    If local scoring is ambiguous/borderline (e.g. score == 0.0 or abs(score) < 0.15)
+    or lacks decisive sentiment signals, falls back to active LLM provider (Ollama / Gemini).
+    """
+    from app.nlp.sentiment import analyze_sentiment_local
+
+    local_res = analyze_sentiment_local(text)
+    local_score = float(local_res.get("score", 0.0))
+    local_sent = local_res.get("sentiment", "neutral")
+
+    # If local sentiment has clear confidence, resolve immediately via local NLP
+    if abs(local_score) >= 0.15 and local_sent != "neutral":
+        return {
+            "sentiment": local_sent,
+            "score": local_score,
+            "resolved_by": "local_nlp",
+        }
+
+    # Ambiguous, borderline, or neutral: trigger LLM fallback
+    try:
+        from app.providers import get_llm_provider
+
+        provider = get_llm_provider()
+        if provider and provider.is_available():
+            llm_res = provider.analyze_sentiment(text)
+            if llm_res and "sentiment" in llm_res and "score" in llm_res:
+                return {
+                    "sentiment": str(llm_res["sentiment"]).lower(),
+                    "score": round(float(llm_res["score"]), 2),
+                    "resolved_by": "llm_fallback",
+                }
+    except Exception as e:
+        logger.warning(f"LLM sentiment fallback failed: {e}. Keeping local sentiment.")
+
+    return {
+        "sentiment": local_sent,
+        "score": local_score,
+        "resolved_by": "local_nlp",
+    }

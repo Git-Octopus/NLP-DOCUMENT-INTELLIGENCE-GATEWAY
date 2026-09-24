@@ -67,7 +67,7 @@ class GeminiProvider(BaseLLMProvider):
             cleaned = re.sub(r"^```json\s*", "", text, flags=re.MULTILINE)
             cleaned = re.sub(r"^```\s*", "", cleaned, flags=re.MULTILINE).strip()
             return json.loads(cleaned)
-        except Exception as e:
+        except Exception:
             match = re.search(r"(\{.*\})", text, re.DOTALL)
             if match:
                 try:
@@ -122,10 +122,12 @@ Return strictly JSON with keys: "topic", "topic_id", "intent", "confidence" (0.7
             )
             or "None"
         )
-        prompt = f"""Extract domain entities (PAYMENT_METHOD, PRODUCT_NAME, ERROR_CODE, TRACKING_NUMBER, SUBSCRIPTION_TIER, ACCOUNT_TYPE) not already extracted: {existing_str}.
-Message: "{text}"
-Return JSON list: [{{"text": "...", "label": "...", "source": "llm_fallback"}}]
-"""
+        prompt = (
+            "Extract domain entities (PAYMENT_METHOD, PRODUCT_NAME, ERROR_CODE, TRACKING_NUMBER, "
+            f"SUBSCRIPTION_TIER, ACCOUNT_TYPE) not already extracted: {existing_str}.\n"
+            f'Message: "{text}"\n'
+            'Return JSON list: [{"text": "...", "label": "...", "source": "llm_fallback"}]\n'
+        )
         response_text = self._generate_text(prompt)
         parsed = None
         if response_text:
@@ -169,10 +171,12 @@ Return JSON list: [{{"text": "...", "label": "...", "source": "llm_fallback"}}]
     def summarize_text(
         self, text: str, max_length: Optional[int] = 150
     ) -> Dict[str, Any]:
-        prompt = f"""Summarize this support document into a paragraph under {max_length or 150} words with 2-4 key bullet points.
-Document: "{text}"
-Return JSON: {{"summary": "...", "key_points": ["..."]}}
-"""
+        prompt = (
+            f"Summarize this support document into a paragraph under {max_length or 150} "
+            "words with 2-4 key bullet points.\n"
+            f'Document: "{text}"\n'
+            'Return JSON: {"summary": "...", "key_points": ["..."]}\n'
+        )
         response_text = self._generate_text(prompt)
         parsed = self._parse_json_from_text(response_text) if response_text else None
         if parsed and "summary" in parsed and "key_points" in parsed:
@@ -183,7 +187,10 @@ Return JSON: {{"summary": "...", "key_points": ["..."]}}
         return self._heuristic_summarize(text)
 
     def analyze_sentiment(self, text: str) -> Dict[str, Any]:
-        prompt = f"""Analyze sentiment polarity of: "{text}". Return JSON: {{"sentiment": "positive"|"neutral"|"negative", "score": float from -1.0 to 1.0}}"""
+        prompt = (
+            f'Analyze sentiment polarity of: "{text}". '
+            'Return JSON: {"sentiment": "positive"|"neutral"|"negative", "score": float from -1.0 to 1.0}'
+        )
         response_text = self._generate_text(prompt)
         parsed = self._parse_json_from_text(response_text) if response_text else None
         if parsed and "sentiment" in parsed and "score" in parsed:

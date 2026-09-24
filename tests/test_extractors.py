@@ -1,7 +1,6 @@
 import io
 import os
 import sys
-import pytest
 import docx
 
 # Dynamically add project root directory to Python search path

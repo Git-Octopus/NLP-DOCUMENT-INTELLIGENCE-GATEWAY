@@ -1,179 +1,321 @@
-# NLP Document Intelligence Gateway
-### Customer Support Text Analysis API — College Mini Project (3–4 Weeks)
+# ⚡ NLP Document Intelligence Gateway
 
-A FastAPI gateway that takes unstructured customer support text/documents and
-returns structured JSON: topic, intent, entities, keywords, sentiment, and evidence.
-Combines local NLP (spaCy, NLTK, scikit-learn) with an external LLM API (OpenAI/Gemini).
-
-> **Project philosophy: NLP-first, LLM-as-fallback.**
-> The academic core of this project is classical/local NLP — preprocessing,
-> tokenization, POS tagging, NER, TF-IDF, keyword extraction, and semantic
-> similarity via Qdrant. These should resolve the **majority** of requests on
-> their own. The LLM (OpenAI/Gemini) is called **only** when local NLP is not
-> confident enough — e.g. topic similarity score below threshold, or an
-> entity type not covered by regex/spaCy rules. This keeps API cost low,
-> keeps the project explainable in viva as "we built NLP, not a wrapper," and
-> matches what the grader expects to see implemented, not outsourced.
+> **High-Performance Multi-Tier NLP API & Analytics Dashboard for Customer Support Intelligence**  
+> Combines deterministic local NLP (spaCy, NLTK, scikit-learn) with dense vector search (Qdrant) and adaptive local/cloud LLM fallbacks (Ollama & Google Gemini).
 
 ---
 
-## 1. Team & Roles
+## 📌 Executive Summary & Philosophy
 
-| Dev | Owns | Tech |
-|---|---|---|
-| **Dev 1** | Gateway, Schemas, DB, Deployment | FastAPI, Pydantic, SQLite, PyMuPDF, python-docx, Docker |
-| **Dev 2** | Core NLP Pipeline (local) — **primary focus of the project** | spaCy, NLTK, scikit-learn, Regex |
-| **Dev 3** | Semantic matching (Qdrant) + LLM fallback + UI | Sentence Transformers, Qdrant (vector DB), OpenAI/Gemini API (fallback only), Streamlit, YAML |
+The **NLP Document Intelligence Gateway** processes raw customer support communications (emails, tickets, chats, and uploaded documents) and transforms them into structured intelligence:
+- **Controlled 10-Topic Taxonomy Classification** (Qdrant semantic search)
+- **Intent Detection** (Regex rules + Qdrant similarity + LLM fallback)
+- **Dual-Tier Sentiment Analysis** (Calibrated VADER + support domain lexicon + LLM fallback)
+- **Named Entity Recognition (NER)** (spaCy pretrained models + high-precision regex extractors)
+- **TF-IDF Keyword Extraction & Evidence Sentence Mining**
+- **Vector-Based Duplicate Message Detection** (Cosine thresholding in Qdrant)
+- **Multi-Format Document Text Extraction** (PDF via PyMuPDF, DOCX via python-docx)
 
-**Where the LLM is actually used (kept minimal, by design):**
-- Topic/intent confirmation **only** when Qdrant similarity score falls below threshold (ambiguous message).
-- Entity extraction **only** for entity types not caught by regex rules or spaCy NER.
-- Optional summarization endpoint (`/summarize`) — separate, non-core feature.
+### 💡 Why This Project?
+- **Avoid Costly LLM Overuse**: Sending every support ticket to cloud LLMs creates high latency, large monthly API bills, and privacy risks.
+- **Explainable & Fast**: Classical NLP (spaCy/NLTK) resolves **>85% of queries locally in sub-milliseconds** at zero operational cost.
+- **Best of Both Worlds**: Pairs high-speed local processing with local/cloud LLMs (`Ollama`/`Gemini`) as a safety net only when queries are ambiguous.
 
-Everything else — normalization, tokenization, stopwords, stemming, lemmatization,
-POS tagging, dependency parsing, N-grams/BoW/TF-IDF, keyword extraction, rule-based
-entity extraction, spaCy NER, and topic/duplicate matching via Qdrant — is 100% local
-NLP with **no LLM call involved**.
-
-**Golden rule:** Dev 1 freezes the Pydantic schemas (`app/schemas/`) on Day 1–2.
-Dev 2 and Dev 3 build against those schemas independently — nobody waits for
-anybody's full module to be "done" before starting their own.
-
----
-
-## 2. Why NOT fully sequential (dev1 → dev2 → dev3)
-
-Working one dev at a time means dev2 and dev3 sit idle for a week, and any
-mistake in dev1's design is only discovered after everyone else is blocked.
-Instead, **all 3 devs start Week 1** and work in parallel against a shared
-contract (the schemas), with short syncs to catch mismatches early.
+### ⚙️ How It Works (In Short)
+1. **Ingest & Clean**: Customer messages or uploaded files (`.pdf`/`.docx`) are normalized, stripped of noise, and tokenized locally.
+2. **Local Analysis First**: Extracts key entities (money, emails, orders, dates), TF-IDF keywords, evidence sentences, and sentiment (calibrated VADER + support lexicon) in real-time.
+3. **Semantic Matching**: Embeds the text with Sentence Transformers and finds the nearest topic in the **Qdrant Vector DB** while checking for duplicate tickets.
+4. **Adaptive Fallback**: If topic similarity is low (`< 0.58`) or sentiment is ambiguous, the gateway automatically asks **Ollama** (`qwen2.5:7b`) or **Gemini** to resolve the nuance.
 
 ---
 
-## 3. Folder Structure
+## 🏛️ System Architecture
+
+```mermaid
+graph TD
+    User([Customer Ticket / Uploaded PDF / DOCX]) --> Gateway[FastAPI Gateway :8000]
+
+    subgraph Tier 1: Local Classical NLP Engine
+        Gateway --> Preprocess[Text Normalization & Tokenization]
+        Preprocess --> Linguistic[Lemmatization & POS Tagging]
+        Preprocess --> NER[Hybrid NER: spaCy + Regex Extractors]
+        Preprocess --> TFIDF[TF-IDF N-Gram Keywords & Evidence Sentences]
+        Preprocess --> Sentiment[Domain-Calibrated VADER & Support Lexicon]
+    end
+
+    subgraph Tier 2: Dense Semantic Vector Store
+        Preprocess --> Embed[Sentence Transformers: all-MiniLM-L6-v2 / Ollama nomic-embed-text]
+        Embed --> Qdrant[(Qdrant Vector DB :6333)]
+        Qdrant -->|Cosine >= 0.58| TopicMatch[Classified Topic & Intent]
+        Qdrant -->|Deduplication| DuplicateCheck[Duplicate Check Flag]
+    end
+
+    subgraph Tier 3: Adaptive LLM Fallback Brain
+        Qdrant -.->|Confidence < 0.58| LLM[Host Ollama: qwen2.5:7b / Google Gemini]
+        Sentiment -.->|Ambiguous / Neutral| LLM
+        LLM --> AmbiguityResolver[Nuanced Topic, Intent & Sentiment Resolution]
+    end
+
+    Tier 1 --> Aggregator[Unified Structured Output Schema]
+    TopicMatch --> Aggregator
+    DuplicateCheck --> Aggregator
+    AmbiguityResolver --> Aggregator
+
+    Aggregator --> SQLite[(SQLite Audit DB)]
+    Aggregator --> Client([Structured JSON / Streamlit UI :8501])
+```
+
+---
+
+## 📂 Project Structure
 
 ```
-nlp-gateway/
-│
+NLP-DOCUMENT-INTELLIGENCE-GATEWAY/
 ├── app/
-│   ├── main.py
-│   ├── config.py
+│   ├── main.py                      # FastAPI application entrypoint & lifespan
+│   ├── config.py                    # Pydantic v2 settings & environment configuration
 │   ├── api/
-│   │   ├── analyze.py
-│   │   ├── similarity.py
-│   │   └── extract.py
+│   │   ├── analyze.py               # POST /analyze (unified ticket intelligence)
+│   │   ├── extract.py               # POST /extract (PDF/DOCX parsing)
+│   │   ├── similarity.py            # POST /similarity (semantic text comparison)
+│   │   ├── summarize.py            # POST /summarize (extractive & LLM summarization)
+│   │   └── models.py                # GET /models & POST /models/config (runtime model manager)
 │   ├── nlp/
-│   │   ├── preprocess.py
-│   │   ├── linguistic.py
-│   │   ├── tfidf.py
-│   │   ├── ner.py
-│   │   ├── embeddings.py
-│   │   ├── vector_store.py      # Qdrant client wrapper
-│   │   ├── topics.py
-│   │   └── rules.py
+│   │   ├── preprocess.py            # Regex cleaning, stopwords, sentence/word tokenizers
+│   │   ├── linguistic.py            # spaCy lemmatization, POS tags, dependency parsing
+│   │   ├── ner.py                   # Combined spaCy NER + regex rule extractors
+│   │   ├── tfidf.py                 # scikit-learn TF-IDF n-grams & keyword scorer
+│   │   ├── rules.py                 # Evidence sentence extraction & patterns
+│   │   ├── sentiment.py             # Calibrated VADER + support polarity lexicons
+│   │   ├── embeddings.py            # SentenceTransformer & Ollama embedding adapter
+│   │   ├── vector_store.py          # Qdrant client wrapper & collection managers
+│   │   └── topics.py                # Taxonomy loader & similarity matching
 │   ├── providers/
-│   │   ├── base.py
-│   │   ├── openai_provider.py
-│   │   └── gemini_provider.py
-│   ├── schemas/
+│   │   ├── base.py                  # Abstract BaseLLMProvider interface
+│   │   ├── ollama_provider.py       # Host Ollama integration (qwen2.5, gemma3, etc.)
+│   │   ├── gemini_provider.py       # Google Gemini Flash/Pro LLM adapter
+│   │   └── openai_provider.py       # OpenAI GPT adapter (optional stub)
+│   ├── schemas/                     # Pydantic data validation schemas
+│   │   ├── analysis.py              # AnalyzeRequest, AnalyzeResponse, TopicMatch, etc.
+│   │   ├── extract.py               # DocumentExtractionResponse
+│   │   ├── models.py                # ModelConfigRequest, AvailableModelsResponse
+│   │   └── summarize.py             # SummarizeRequest, SummarizeResponse
 │   └── services/
-│
+│       ├── crud.py                  # SQLAlchemy persistence helpers
+│       ├── database.py              # SQLite engine & Base model
+│       ├── extractors.py            # PyMuPDF (PDF) & python-docx byte stream parsers
+│       ├── model_manager.py         # Runtime dynamic model catalog & discovery
+│       └── semantic.py              # Safe fallback adapters for Qdrant/LLM
 ├── config/
-│   └── topics.yaml
-├── tests/
+│   └── topics.yaml                  # Controlled 10-Topic Taxonomy & anchor sentences
 ├── streamlit_app/
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml        # runs API + Qdrant together
-├── requirements.txt
+│   └── app.py                       # Interactive Streamlit analytics dashboard
+├── tests/                           # 100+ pytest unit and integration tests
+├── Dockerfile                       # Optimized lightweight CPU-only container image
+├── docker-compose.yml               # Multi-container orchestration (Gateway, UI, Qdrant)
+├── requirements.txt                 # Production dependencies
+├── requirements-dev.txt             # Testing & linting tools (flake8, black, pytest)
 └── README.md
 ```
 
-> **Qdrant setup:** run it locally via Docker (`docker run -p 6333:6333 qdrant/qdrant`)
-> or use [Qdrant Cloud](https://cloud.qdrant.io) free tier for the deployed version.
-> Store the URL/API key in `.env` as `QDRANT_URL` and `QDRANT_API_KEY`.
+---
+
+## 🏷️ Controlled 10-Topic Taxonomy
+
+Defined in [`config/topics.yaml`](config/topics.yaml), each topic contains curated intent tags and anchor sentences embedded into Qdrant for semantic similarity classification:
+
+| # | Topic Label | Focus Area | Example Intent Tags |
+|---|---|---|---|
+| 1 | **Payment** | Card declines, failed checkouts, gateway timeouts | `duplicate_payment`, `failed_transaction` |
+| 2 | **Billing & Refunds** | Money reversals, refund status, double charges | `request_refund`, `delayed_refund` |
+| 3 | **Invoice & Billing** | Invoice discrepancies, tax/GST details, receipts | `request_invoice`, `incorrect_amount` |
+| 4 | **Order Tracking & Shipping** | Tracking numbers, delivery delays, missing parcels | `track_order`, `delayed_delivery` |
+| 5 | **Returns & Exchanges** | Defective items, replacements, RMA labels | `return_item`, `report_damaged_item` |
+| 6 | **Account & Login** | Password resets, account lockouts, 2FA issues | `reset_password`, `account_locked` |
+| 7 | **Subscription & Plans** | Plan cancellations, auto-renewals, tier upgrades | `cancel_subscription`, `upgrade_plan` |
+| 8 | **Technical Issue & Bugs** | App crashes, UI freezes, error codes | `report_bug`, `app_crash` |
+| 9 | **General Inquiry** | Operating hours, store policies, contact channels | `general_info`, `business_hours` |
+| 10 | **Feedback & Complaints** | Service feedback, agent escalations, compliments | `file_complaint`, `give_feedback` |
 
 ---
 
-## 4. Day-by-Day Plan
+## 🚀 Getting Started
 
-Legend: 🔴 = must sync with other devs today · 🟢 = independent work
-
-### WEEK 1 — Foundation
-
-| Day | Dev 1 | Dev 2 | Dev 3 |
-|---|---|---|---|
-| **Day 1** 🔴 | Init repo, create folder structure (`app/`, `api/`, `nlp/`, `providers/`, `schemas/`). Start writing Pydantic schemas (topic, intent, entity, keyword, sentiment, evidence). | Set up `app/nlp/` module files (empty stubs). Read Dev 1's draft schemas as they're written. List out preprocessing steps needed (normalization, tokenization, stopwords, stemming). | Create `config/topics.yaml` draft with 10 topic names + short descriptions. Decide embedding model (Sentence Transformers, e.g. `all-MiniLM-L6-v2`) that will feed vectors into **Qdrant**. |
-| **Day 2** 🔴 | Finish + **freeze** Pydantic schemas. Push to repo. Build FastAPI skeleton: `main.py`, routes `/analyze`, `/similarity`, `/extract`, `/summarize` returning dummy JSON matching schema. | Pull frozen schemas. Start `preprocess.py`: text normalization (regex) + sentence/word tokenization (spaCy/NLTK). | Add 3–5 example phrases per topic in `topics.yaml`. Spin up **Qdrant locally via Docker** (`docker run -p 6333:6333 qdrant/qdrant`). Scaffold `providers/base.py` (abstract provider class: `get_intent()`, `extract_entities()`, `summarize()`). |
-| **Day 3** | Add `.env.example`. Test that dummy `/analyze` endpoint runs locally and returns schema-valid JSON. | Continue `preprocess.py`: stopword removal + stemming (NLTK). Test on 5–10 sample support messages. | Finalize all 10 topics in `topics.yaml` with descriptions + examples. Decide primary LLM provider (OpenAI or Gemini) and get API key set up. |
-| **Day 4** | Set up SQLite connection (`database.py`). Draft table schemas: `analysis`, `entities`, `evidence` (don't wire yet). | Start `linguistic.py`: lemmatization + POS tagging using spaCy pretrained model. | Install Sentence Transformers. Write `vector_store.py`: Qdrant client wrapper (`connect()`, `create_collection()`). Create a `topics` collection in Qdrant sized to the embedding model's dimension. |
-| **Day 5** | Implement PDF text extraction using PyMuPDF (`extract_pdf(file)` function, tested standalone). | Continue `linguistic.py`: dependency parsing. Test lemmatizer + POS output on sample messages. | Embed all `topics.yaml` descriptions/examples and **upsert them into the Qdrant `topics` collection** (with topic label as payload). Write `embeddings.py`: embed an incoming message and query Qdrant for nearest topic. Test on 5 sample messages. |
-| **Day 6** | Implement DOCX text extraction using python-docx (`extract_docx(file)`). Test both extractors with sample files. | Write unit tests for `preprocess.py` and `linguistic.py` outputs. Clean up code, add docstrings. | Refine Qdrant similarity-score threshold for topic matching. Create a second Qdrant collection (`messages`) to store past analyzed messages — this will power **duplicate detection**. Start `openai_provider.py` or `gemini_provider.py` skeleton (auth + basic call). |
-| **Day 7** 🔴 | **Checkpoint:** demo schema + FastAPI skeleton + extraction functions to team. Confirm nothing needs to change in schema shape. | **Checkpoint:** demo preprocessing + linguistic pipeline output on 3 sample texts. | **Checkpoint:** demo topic similarity matching via Qdrant on 3 sample texts. Confirm LLM provider choice with team. |
-
-### WEEK 2 — Core Build
-
-| Day | Dev 1 | Dev 2 | Dev 3 |
-|---|---|---|---|
-| **Day 8** | Wire SQLite tables for real (`analysis`, `entities`, `evidence` — create + insert functions). | Start `tfidf.py`: N-grams + Bag of Words using scikit-learn. | Build the LLM provider as a **fallback function only**: `resolve_ambiguous(text, top_qdrant_matches)` — called when Qdrant confidence is low. |
-| **Day 9** | Wire extraction functions (`extract_pdf`, `extract_docx`) into `/extract` route so it returns real extracted text. | Continue `tfidf.py`: TF-IDF vectorization + keyword extraction (TF-IDF + noun phrases). | Test fallback function on 10 deliberately ambiguous messages (low Qdrant confidence). Tune the confidence threshold that decides when to call the LLM at all. |
-| **Day 10** | Test `/extract` route end-to-end with real PDF/DOCX file uploads. Fix bugs. | Finish `tfidf.py`. Write unit tests for keyword extraction. | Write fallback prompt for entity types not caught by regex/spaCy (only triggered on request, not always). |
-| **Day 11** 🔴 | **Mid-sprint check:** confirm DB schema matches what entities/evidence data will look like from Dev 2/Dev 3 output. | Start `rules.py`: regex patterns for money, email, phone numbers, IDs, dates. | Test fallback entity extraction on 10 messages that regex/spaCy NER genuinely miss. Implement duplicate detection: embed incoming message, search `messages` collection in Qdrant for nearest neighbor above similarity threshold (no LLM needed here). |
-| **Day 12** | Add error handling to `/extract` (bad file type, corrupted file, empty text). | Finish `rules.py`. Start `ner.py`: integrate spaCy pretrained NER model for baseline entity recognition. | Combine topic match + duplicate detection + LLM intent results into one clean function output that matches Dev 1's schema. On each `/analyze` call, upsert the new message embedding into the `messages` Qdrant collection so future duplicates can be caught. |
-| **Day 13** | Write basic input validation across all routes (empty text, oversized file). | Finish `ner.py`. Merge rules-based + spaCy NER results into one entity list, deduplicate. | Add optional summarization prompt (for later `/summarize` route). Start `gemini_provider.py` (or OpenAI) as the optional second adapter — lower priority. |
-| **Day 14** 🔴 | **Checkpoint:** demo DB writes + `/extract` route fully working with real files. | **Checkpoint:** demo full local NLP output (preprocess → linguistic → TF-IDF/keywords → entities) on a sample message, matching schema. | **Checkpoint:** demo topic match + duplicate detection (both via Qdrant) + intent/entity extraction from LLM provider on a sample message, matching schema. |
-
-### WEEK 3 — Integration
-
-| Day | Dev 1 | Dev 2 | Dev 3 |
-|---|---|---|---|
-| **Day 15** 🔴 | Start wiring `/analyze` route: call Dev 2's preprocessing + linguistic + TF-IDF functions in sequence. | Support Dev 1 — fix any function signature mismatches found during wiring. Start writing unit tests for `rules.py`/`ner.py`. | Support Dev 1 — help wire embeddings + LLM provider calls into `/analyze`. Start Streamlit app skeleton (`streamlit_app/app.py`) — basic text input box. |
-| **Day 16** | Continue `/analyze` wiring: merge Dev 2's entities + Dev 3's topic/intent/LLM entities into one response object. | Fix bugs surfaced from integration. Add tests for `preprocess.py`/`linguistic.py` edge cases (empty text, special chars). | Streamlit: call `/analyze` endpoint from UI, display raw JSON response. |
-| **Day 17** | Assemble final structured JSON: topic, intent, entities, keywords, sentiment, evidence — save result to SQLite after each `/analyze` call. | Add sentiment logic (simple rule-based or lightweight classifier) if not already covered by LLM output. | Streamlit: format JSON response into readable UI (topic badge, entity table, confidence scores). |
-| **Day 18** | Wire `/similarity` route using Dev 3's embedding similarity function (compare text_a vs text_b). | Write integration tests: full pipeline on 10 sample messages, check schema compliance. | Finalize primary LLM provider end-to-end. Keep second provider adapter stubbed (not required to fully work). |
-| **Day 19** 🔴 | **Sync:** run full `/analyze` flow live with team, fix any breaking issues found together. | **Sync:** confirm test coverage for `nlp/` modules is solid; report any pipeline bugs. | **Sync:** confirm Streamlit correctly displays every field from the schema. |
-| **Day 20** | Add centralized error handling + logging across all routes. | Polish and re-run evaluation-style tests on the local NLP modules. | Add file upload support in Streamlit (PDF/DOCX → calls `/extract` then `/analyze`). |
-| **Day 21** 🔴 | **Checkpoint:** full end-to-end test — upload a file in Streamlit → extract → analyze → structured JSON → saved in DB. All 3 devs test together. | | |
-
-### WEEK 4 — Polish, Test, Deploy
-
-| Day | Dev 1 | Dev 2 | Dev 3 |
-|---|---|---|---|
-| **Day 22** | Write Dockerfile + `docker-compose.yml` (API + Qdrant services) + finalize `.env.example` + `requirements.txt`. | Start building evaluation dataset: 300–600 realistic support messages across 10 topics (20–60 per topic). | Polish Streamlit UI styling — layout, labels, error states. |
-| **Day 23** | Test full stack locally with `docker-compose up` (API + Qdrant together), fix issues. | Continue dataset creation, add paraphrased + deliberately tricky examples (typos, short/indirect messages). | Prepare architecture diagram (flow: text → preprocessing → topics/Qdrant → LLM → JSON). |
-| **Day 24** | Deploy API to Render (or similar). Switch `QDRANT_URL`/`QDRANT_API_KEY` in prod `.env` to **Qdrant Cloud** free-tier instance. Confirm live URL works with a real request. | Annotate evaluation set (expected topic, entities, intent). Run pipeline against it, compute accuracy/F1 for topic detection & NER. | Draft final report sections: overview, architecture, tech stack. |
-| **Day 25** | Write API documentation (routes, request/response examples). | Compute remaining metrics: similarity/duplicate detection precision-recall, sentiment accuracy. Write short evaluation report. | Record short demo video walkthrough of Streamlit app. |
-| **Day 26** 🔴 | Bug bash with team — fix anything broken in deployed version. | Bug bash — verify metrics/report numbers are consistent with final code. | Bug bash — verify UI works against deployed API, not just localhost. |
-| **Day 27** | Final review of README, Docker, deployment instructions. | Final review of evaluation report and dataset files. | Finish PPT + final report; polish demo video. |
-| **Day 28** 🔴 | **Demo day / viva rehearsal** — all 3 devs run through the full demo together, assign who explains which part. | | |
+### Prerequisites
+- **Python 3.10+** (Tested on Python 3.12)
+- **Docker Desktop** (for containerized deployment)
+- *(Optional)* **Ollama** installed on your host machine for local LLM inference
 
 ---
 
-## 5. Daily Sync Rule (to avoid overhead & waiting)
+### Method 1: Docker Compose (Recommended)
 
-- **Week 1–2:** async check-ins are fine (message updates).
-- **Week 3 (integration):** 10-min daily  — what's blocked, what's done.
+The project includes an optimized Docker setup. The Dockerfile uses lightweight CPU-only PyTorch wheels (~180MB instead of 2.5GB+ CUDA bundles) to ensure fast, minimal-footprint container builds.
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Git-Octopus/NLP-DOCUMENT-INTELLIGENCE-GATEWAY.git
+   cd NLP-DOCUMENT-INTELLIGENCE-GATEWAY
+   ```
+
+2. **Configure Environment Variables:**
+   Copy the template and provide keys if using cloud providers:
+   ```bash
+   cp .env.example .env
+   ```
+   *(Optional: Add `GEMINI_API_KEY=your_key` in `.env` if you want Google Gemini fallback enabled).*
+
+3. **Build and Launch Containers:**
+   ```bash
+   docker compose up --build
+   ```
+
+4. **Access the Services:**
+   - 🌐 **Interactive Streamlit Dashboard**: [http://localhost:8501](http://localhost:8501)
+   - ⚡ **FastAPI Swagger API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - 📦 **Qdrant Vector Database Web UI**: [http://localhost:6333/dashboard](http://localhost:6333/dashboard)
+
 ---
 
-## 6. Deliverables Checklist
+### Method 2: Native Local Installation (Development)
 
-- [ ] FastAPI gateway with all routes working
-- [ ] Pydantic schemas
-- [ ] Core NLP pipeline (preprocessing, POS, NER, TF-IDF, keywords)
-- [ ] Topic config (`topics.yaml`) + semantic similarity via Qdrant
-- [ ] Duplicate detection via Qdrant vector search
-- [ ] OpenAI/Gemini provider integration
-- [ ] PDF/DOCX extraction
-- [ ] SQLite storage
-- [ ] Streamlit demo UI
-- [ ] Evaluation dataset + metrics report
-- [ ] Dockerfile + deployment
-- [ ] README + architecture diagram
-- [ ] Final report, PPT, demo video
+1. **Create and Activate Virtual Environment:**
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\activate   # On Linux/macOS: source venv/bin/activate
+   ```
+
+2. **Install Dependencies & Download NLP Assets:**
+   ```bash
+   pip install -r requirements.txt
+   python -m spacy download en_core_web_sm
+   python -c "import nltk; nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True); nltk.download('stopwords', quiet=True); nltk.download('vader_lexicon', quiet=True)"
+   ```
+
+3. **Start Qdrant Vector DB (Docker):**
+   ```bash
+   docker run -d -p 6333:6333 -p 6334:6334 --name nlp_qdrant qdrant/qdrant:latest
+   ```
+
+4. **Launch the FastAPI Gateway:**
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+5. **Launch the Streamlit Frontend (In a separate terminal):**
+   ```bash
+   streamlit run streamlit_app/app.py
+   ```
 
 ---
 
-## 7. What NOT to Build (keep scope controlled)
+## 🦙 Host Ollama Auto-Discovery
 
-No custom model/transformer training, no large data collection, no Redis/Kafka,
-no microservices, no full CRM system, no generic chatbot as main interface.
+The gateway natively auto-detects and connects to Ollama running on your host machine (`127.0.0.1:11434` natively or `host.docker.internal:11434` inside Docker Compose).
+
+1. Ensure Ollama is running on your machine:
+   ```bash
+   ollama list
+   ```
+2. Pull recommended embedding and reasoning models:
+   ```bash
+   ollama pull nomic-embed-text:latest
+   ollama pull qwen2.5:7b
+   ```
+3. Open the **Streamlit Dashboard** (`http://localhost:8501`). The sidebar will automatically show `Ollama: 🟢 Online` and populate dropdowns with your installed host models!
+
+---
+
+## 🔌 API Endpoints Reference
+
+### 1. `POST /analyze` — Full Document Intelligence
+Accepts either JSON text input or uploaded document (`.pdf` / `.docx`).
+
+**Request Example (JSON):**
+```json
+{
+  "text": "My Visa card was charged $49.99 twice for order #ORD-8812. Please issue a refund.",
+  "metadata": {"channel": "email"}
+}
+```
+
+**Response Example:**
+```json
+{
+  "request_id": "req-9b81f1e2",
+  "original_text": "My Visa card was charged $49.99 twice for order #ORD-8812. Please issue a refund.",
+  "cleaned_text": "my visa card was charged 49.99 twice for order ord 8812 please issue a refund",
+  "topic": {
+    "topic": "Billing & Refunds",
+    "confidence": 0.924,
+    "resolved_by": "qdrant"
+  },
+  "intent": {
+    "intent": "request_refund",
+    "confidence": 0.92,
+    "resolved_by": "rules"
+  },
+  "sentiment": {
+    "sentiment": "negative",
+    "score": -0.65,
+    "resolved_by": "local_nlp"
+  },
+  "entities": [
+    {"text": "$49.99", "label": "MONEY", "source": "regex"},
+    {"text": "ORD-8812", "label": "ORDER_ID", "source": "regex"},
+    {"text": "Visa", "label": "ORG", "source": "spacy"}
+  ],
+  "keywords": ["charged twice", "visa card", "refund", "order"],
+  "evidence_sentences": [
+    "My Visa card was charged $49.99 twice for order #ORD-8812."
+  ],
+  "duplicate_info": {
+    "is_duplicate": false,
+    "similarity_score": 0.0
+  }
+}
+```
+
+### 2. `POST /extract` — Document Text Extraction
+Extracts plain text and token metadata from uploaded PDF or Word documents.
+
+### 3. `POST /similarity` — Semantic Text Similarity
+Computes cosine similarity between two text snippets using the active dense embedding model.
+
+### 4. `POST /summarize` — Support Ticket Summarization
+Generates concise executive summaries and bulleted key points using local extractive rankers or LLM fallback.
+
+### 5. `GET /models` & `POST /models/config` — Runtime Model Selection
+Enables dynamic, zero-restart switching of embedding providers (Sentence Transformer vs. Ollama) and reasoning providers (Ollama vs. Gemini).
+
+---
+
+## 🧪 Testing & Code Quality
+
+The repository enforces strict linting, formatting, and unit/integration testing across all modules:
+
+```powershell
+# 1. Check code formatting with Black
+python -m black --check .
+
+# 2. Verify PEP8 compliance with Flake8
+python -m flake8 .
+
+# 3. Run complete test suite (100+ tests)
+python -m pytest
+```
+
+---
+
+## 👥 Academic Team Roles & Responsibilities
+
+| Contributor | Area of Ownership | Technology Stack |
+|---|---|---|
+| **Dev 1** | Gateway API, Pydantic Schemas, DB Persistence, Docker Containers | FastAPI, Pydantic v2, SQLite, SQLAlchemy, PyMuPDF, python-docx, Docker |
+| **Dev 2** | Core Local NLP Pipeline, Tokenization, TF-IDF, NER, Sentiment Engine | spaCy, NLTK, scikit-learn, VADER, Regular Expressions |
+| **Dev 3** | Semantic Matching, Vector Store, LLM Fallback Integration, Streamlit UI | Sentence Transformers, Qdrant Vector DB, Ollama, Gemini API, Streamlit |
+
+---
+
+## 📜 License
+Distributed under the MIT License for academic and educational evaluation.

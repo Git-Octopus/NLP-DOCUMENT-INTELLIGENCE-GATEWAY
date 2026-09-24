@@ -9,36 +9,87 @@ import re
 from typing import List, Dict, Any, Optional
 from app.nlp.preprocess import tokenize_sentences
 
-# Compile high-precision regex patterns
+# Compile high-precision deterministic regex patterns
 REGEX_PATTERNS = {
     "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
-    "PHONE": re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"),
+    "PHONE": re.compile(
+        (
+            r"(?:\+?91[\-\s]?)?[6-9]\d{4}[\-\s]?\d{5}\b|"
+            r"(?:\+?91[\-\s]?)?[6-9]\d{9}\b|"
+            r"(?:\+?\d{1,3}[\-\s.]?)?\(?\d{3}\)?[\-\s.]?\d{3}[\-\s.]?\d{4}\b"
+        ),
+        re.IGNORECASE,
+    ),
     "MONEY": re.compile(
-        r"(?:[\$€£₹¥]|USD\s?|EUR\s?|GBP\s?|INR\s?)\d+(?:,\d{3})*(?:\.\d{1,2})?\b|\b\d+(?:,\d{3})*(?:\.\d{1,2})?\s?(?:USD|EUR|GBP|INR|AUD|CAD|dollars|cents)\b",
+        (
+            r"(?:[\$€£₹¥]|Rs\.?\s?|INR\s?|USD\s?|EUR\s?|GBP\s?)\d+(?:,\d{3})*(?:\.\d{1,2})?\b|"
+            r"\b\d+(?:,\d{3})*(?:\.\d{1,2})?\s?(?:USD|EUR|GBP|INR|AUD|CAD|dollars|cents|rupees)\b"
+        ),
         re.IGNORECASE,
     ),
     "ORDER_ID": re.compile(
-        r"(?:#|ORD[-_]|ORDER[-_]?|TKT[-_]|TICKET[-_]?|ID:\s?)[A-Z0-9_-]{3,15}\b",
+        (
+            r"(?:#|(?:ORD|ORDER|INV|INVOICE|TXN|TRANSACTION|TKT|TICKET|CASE|TRK|TRACKING|ERR|REF|ID)[-_: ]\s?)"
+            r"[A-Z0-9_-]{3,20}\b"
+        ),
         re.IGNORECASE,
     ),
     "DATE": re.compile(
-        r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s+\d{4}\b",
+        (
+            r"\b\d{4}-\d{2}-\d{2}\b|"
+            r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|"
+            r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b|"
+            r"\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s+\d{4}\b"
+        ),
         re.IGNORECASE,
     ),
 }
+
+
+def _determine_identifier_label(entity_str: str) -> str:
+    """Classifies identifier string into specific domain entity type."""
+    upper = entity_str.upper()
+    if "INV" in upper or "INVOICE" in upper:
+        return "INVOICE_ID"
+    if "TXN" in upper or "TRANS" in upper:
+        return "TRANSACTION_ID"
+    if "TKT" in upper or "TICKET" in upper:
+        return "TICKET_ID"
+    if "TRK" in upper or "TRACK" in upper:
+        return "TRACKING_NUMBER"
+    if "ERR" in upper:
+        return "ERROR_CODE"
+    if "CASE" in upper:
+        return "CASE_ID"
+    return "ORDER_ID"
+
+
+def _detect_currency(entity_str: str) -> Optional[str]:
+    """Detects currency symbol or ISO code from money entity string."""
+    upper = entity_str.upper()
+    if "₹" in entity_str or "RS" in upper or "INR" in upper or "RUPEES" in upper:
+        return "INR"
+    if "$" in entity_str or "USD" in upper or "DOLLARS" in upper:
+        return "USD"
+    if "€" in entity_str or "EUR" in upper:
+        return "EUR"
+    if "£" in entity_str or "GBP" in upper:
+        return "GBP"
+    if "¥" in entity_str:
+        return "JPY"
+    return None
 
 
 def extract_rule_entities(text: str) -> List[Dict[str, Any]]:
     """
     Runs high-precision deterministic regex pattern extractors:
     - Emails: RFC 5322 regex pattern
-    - Phone Numbers: International and local formats
-    - Money/Currency: Amounts like $49.99, USD 50, ₹500, €12.50
-    - Order/Ticket IDs: Alpha-numeric patterns like #ORD-12345, TKT-9982, ID: 88392
-    - Dates: Formats like YYYY-MM-DD, DD/MM/YYYY, Jan 15, 2026
+    - Phone Numbers: International and Indian formats (+91, 10-digit mobile)
+    - Money/Currency: Amounts like ₹1,500, Rs. 1500, $49.99, USD 50, €12.50
+    - Identifiers: ORD-2026-1042, INV-2026-0042, TXN-10293, TKT-9982, TRK-88219, ERR-502
+    - Dates: Formats like YYYY-MM-DD, DD/MM/YYYY, 12 September 2026
 
-    Returns list of dicts formatted as:
-    [{"entity": str, "label": str, "source": "rule", "start": int, "end": int}]
+    Returns list of dicts with character offsets, confidence (1.0), and source ('rule').
     """
     if not text:
         return []
@@ -51,25 +102,29 @@ def extract_rule_entities(text: str) -> List[Dict[str, Any]]:
             start_idx = match.start()
             end_idx = match.end()
 
-            # Specific label refined for tickets vs order ids
             final_label = label
-            if label == "ORDER_ID" and (
-                "TKT" in entity_str.upper() or "TICKET" in entity_str.upper()
-            ):
-                final_label = "TICKET_ID"
+            if label == "ORDER_ID":
+                final_label = _determine_identifier_label(entity_str)
 
-            entities.append(
-                {
-                    "entity": entity_str,
-                    "text": entity_str,  # schema compatibility
-                    "label": final_label,
-                    "source": "rule",
-                    "start": start_idx,
-                    "end": end_idx,
-                    "start_char": start_idx,  # schema compatibility
-                    "end_char": end_idx,  # schema compatibility
-                }
-            )
+            ent_dict: Dict[str, Any] = {
+                "entity": entity_str,
+                "text": entity_str,
+                "label": final_label,
+                "type": final_label,
+                "source": "rule",
+                "confidence": 1.0,
+                "start": start_idx,
+                "end": end_idx,
+                "start_char": start_idx,
+                "end_char": end_idx,
+            }
+
+            if label == "MONEY":
+                currency = _detect_currency(entity_str)
+                if currency:
+                    ent_dict["currency"] = currency
+
+            entities.append(ent_dict)
 
     # Sort entities by start index
     entities.sort(key=lambda x: x["start"])

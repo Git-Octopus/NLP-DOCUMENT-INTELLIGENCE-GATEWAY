@@ -6,26 +6,70 @@ for topic classification and duplicate detection.
 """
 
 import hashlib
+import logging
 import math
 import re
-from typing import List
-from functools import lru_cache
+from typing import List, Optional
 import numpy as np
+import requests
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _model = None
+_loaded_model_name: Optional[str] = None
 
 
-def _get_model():
-    """Lazy loader for SentenceTransformer model."""
-    global _model
-    if _model is None:
+def reset_embedding_model():
+    """Invalidates the cached SentenceTransformer model instance."""
+    global _model, _loaded_model_name
+    _model = None
+    _loaded_model_name = None
+    logger.info("Active embedding model cache invalidated.")
+
+
+def _get_active_provider_and_model(
+    model_name: Optional[str] = None, provider: Optional[str] = None
+) -> tuple[str, str]:
+    """Helper to dynamically resolve embedding provider and model name."""
+    try:
+        from app.services.model_manager import model_manager
+
+        active_provider = provider or model_manager.embedding_provider
+        active_model = model_name or model_manager.embedding_model
+    except Exception:
+        active_provider = provider or getattr(
+            settings, "EMBEDDING_PROVIDER", "sentence_transformer"
+        )
+        active_model = model_name or getattr(
+            settings, "EMBEDDING_MODEL", "all-MiniLM-L6-v2"
+        )
+
+    return (
+        active_provider or "sentence_transformer"
+    ).lower(), active_model or "all-MiniLM-L6-v2"
+
+
+def _get_sentence_transformer_model(target_model_name: str):
+    """Lazy loader for SentenceTransformer model supporting dynamic model names."""
+    global _model, _loaded_model_name
+    if _model is None or _loaded_model_name != target_model_name:
         try:
             from sentence_transformers import SentenceTransformer
-            from app.config import settings
 
-            _model = SentenceTransformer(settings.EMBEDDING_MODEL)
-        except Exception:
+            _model = SentenceTransformer(target_model_name)
+            _loaded_model_name = target_model_name
+            logger.info(
+                f"Loaded SentenceTransformer embedding model: {target_model_name}"
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to load SentenceTransformer model '{target_model_name}' ({e}). "
+                f"Falling back to deterministic hash vectors."
+            )
             _model = False
+            _loaded_model_name = target_model_name
     return _model
 
 
@@ -47,37 +91,119 @@ def _fallback_embedding(text: str, dimension: int = 384) -> List[float]:
     return [value / norm for value in vector]
 
 
-def get_embedding(text: str, model_name: str = "all-MiniLM-L6-v2") -> List[float]:
-    """
-    Generates a dense vector embedding (384 dimensions) for input text string.
-    """
-    model = _get_model()
+def _ollama_embedding(text: str, model_name: str) -> Optional[List[float]]:
+    """Generates dense vector using local Ollama instance."""
+    base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434").rstrip(
+        "/"
+    )
+    try:
+        # Try modern Ollama /api/embed endpoint
+        resp = requests.post(
+            f"{base_url}/api/embed",
+            json={"model": model_name, "input": text},
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            embeddings = data.get("embeddings", [])
+            if embeddings and len(embeddings) > 0:
+                return [float(x) for x in embeddings[0]]
 
-    if model:
-        embedding = model.encode(text, convert_to_numpy=True)
+        # Fallback to classic /api/embeddings endpoint
+        resp = requests.post(
+            f"{base_url}/api/embeddings",
+            json={"model": model_name, "prompt": text},
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            embedding = data.get("embedding", [])
+            if embedding:
+                return [float(x) for x in embedding]
+    except Exception as e:
+        logger.warning(f"Ollama embedding request failed for model '{model_name}': {e}")
+    return None
+
+
+def get_embedding(
+    text: str,
+    model_name: Optional[str] = None,
+    provider: Optional[str] = None,
+) -> List[float]:
+    """
+    Generates a dense vector embedding for input text string using either
+    the configured SentenceTransformer or Ollama model.
+    """
+    active_provider, active_model = _get_active_provider_and_model(model_name, provider)
+
+    if active_provider == "ollama":
+        vector = _ollama_embedding(text, active_model)
+        if vector:
+            return vector
+        logger.warning(
+            f"Ollama embedding unavailable for '{active_model}'. Using deterministic fallback."
+        )
+        return _fallback_embedding(text, getattr(settings, "EMBEDDING_DIMENSION", 384))
+
+    # Default to SentenceTransformer
+    st_model = _get_sentence_transformer_model(active_model)
+    if st_model:
+        embedding = st_model.encode(text, convert_to_numpy=True)
         return embedding.astype(float).tolist()
 
-    from app.config import settings
-
-    return _fallback_embedding(text, settings.EMBEDDING_DIMENSION)
+    return _fallback_embedding(text, getattr(settings, "EMBEDDING_DIMENSION", 384))
 
 
 def get_embeddings_batch(
     texts: List[str],
-    model_name: str = "all-MiniLM-L6-v2",
+    model_name: Optional[str] = None,
+    provider: Optional[str] = None,
 ) -> List[List[float]]:
     """
-    Generates dense vector embeddings for a list of input text strings in batches.
+    Generates dense vector embeddings for a list of input texts.
     """
-    model = _get_model()
+    active_provider, active_model = _get_active_provider_and_model(model_name, provider)
 
-    if model:
-        embeddings = model.encode(texts, convert_to_numpy=True)
+    if active_provider == "ollama":
+        base_url = getattr(
+            settings, "OLLAMA_BASE_URL", "http://localhost:11434"
+        ).rstrip("/")
+        try:
+            resp = requests.post(
+                f"{base_url}/api/embed",
+                json={"model": active_model, "input": texts},
+                timeout=20.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                embeddings = data.get("embeddings", [])
+                if len(embeddings) == len(texts):
+                    return [[float(x) for x in emb] for emb in embeddings]
+        except Exception as e:
+            logger.warning(f"Ollama batch embed failed for '{active_model}': {e}")
+
+        # Fallback element by element
+        return [
+            get_embedding(t, model_name=active_model, provider=active_provider)
+            for t in texts
+        ]
+
+    # SentenceTransformer batch
+    st_model = _get_sentence_transformer_model(active_model)
+    if st_model:
+        embeddings = st_model.encode(texts, convert_to_numpy=True)
         return embeddings.astype(float).tolist()
 
-    from app.config import settings
+    return [
+        _fallback_embedding(text, getattr(settings, "EMBEDDING_DIMENSION", 384))
+        for text in texts
+    ]
 
-    return [_fallback_embedding(text, settings.EMBEDDING_DIMENSION) for text in texts]
+
+def get_active_embedding_dimension() -> int:
+    """Returns the vector dimension produced by the currently active embedding model."""
+    sample_vec = get_embedding("dimension_probe")
+    return len(sample_vec)
 
 
 def embed_text(text: str) -> List[float]:

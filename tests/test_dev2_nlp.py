@@ -17,30 +17,22 @@ import os
 # Ensure root directory is on PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import pytest
 from app.nlp.preprocess import (
     clean_text,
     normalize_text,
     expand_contractions,
     tokenize_sentences,
-    tokenize_sentences_spacy,
     tokenize_words,
-    tokenize_words_spacy,
     remove_stopwords,
-    remove_stopwords_spacy,
     apply_stemming,
-    preprocess_pipeline,
 )
 from app.nlp.linguistic import (
     analyze_linguistics,
-    lemmatize_text,
-    pos_tag_text,
     extract_noun_chunks,
     extract_dependency_features,
 )
 from app.nlp.tfidf import (
     generate_bow_and_tfidf,
-    compute_tfidf,
     extract_keywords,
     extract_ngrams,
 )
@@ -49,7 +41,6 @@ from app.nlp.rules import (
     extract_evidence_sentences,
 )
 from app.nlp.ner import (
-    extract_spacy_entities,
     extract_all_entities,
 )
 from app.nlp.sentiment import (

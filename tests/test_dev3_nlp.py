@@ -14,13 +14,11 @@ from app.main import app
 from app.config import settings
 from app.nlp.embeddings import (
     get_embedding as embed_text,
-    get_embeddings_batch as embed_texts,
     compute_cosine_similarity,
 )
 from app.nlp.vector_store import (
     connect_qdrant as get_qdrant_client,
     init_collections,
-    search_similar_topics,
     search_duplicate_message,
 )
 from app.nlp.topics import (
@@ -34,9 +32,6 @@ from app.providers import get_llm_provider
 from app.providers.gemini_provider import GeminiProvider
 from app.providers.openai_provider import OpenAIProvider
 from app.schemas.analysis import AnalyzeResponse
-from app.schemas.similarity import SimilarityResponse
-from app.schemas.extract import ExtractResponse
-from app.schemas.summarize import SummarizeResponse
 from app.services.database import Base, engine
 
 client = TestClient(app)

@@ -12,9 +12,10 @@ from app.api.analyze import router as analyze_router
 from app.api.similarity import router as similarity_router
 from app.api.extract import router as extract_router
 from app.api.summarize import router as summarize_router
+from app.api.models import router as models_router
 
 from app.services.database import Base, engine
-from app import models
+from app import models  # noqa: F401
 
 # Configure Centralized Logging
 logging.basicConfig(
@@ -114,12 +115,14 @@ app.include_router(analyze_router)
 app.include_router(similarity_router)
 app.include_router(extract_router)
 app.include_router(summarize_router)
+app.include_router(models_router)
 
 # Also mount under /api/v1 prefix for versioned access
 app.include_router(analyze_router, prefix=settings.API_PREFIX)
 app.include_router(similarity_router, prefix=settings.API_PREFIX)
 app.include_router(extract_router, prefix=settings.API_PREFIX)
 app.include_router(summarize_router, prefix=settings.API_PREFIX)
+app.include_router(models_router, prefix=settings.API_PREFIX)
 
 
 @app.get(
@@ -140,6 +143,7 @@ async def root() -> Dict[str, Any]:
             "/similarity",
             "/extract",
             "/summarize",
+            "/models",
             "/health",
         ],
     }

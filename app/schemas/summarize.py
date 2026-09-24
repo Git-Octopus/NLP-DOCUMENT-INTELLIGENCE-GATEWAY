@@ -13,7 +13,13 @@ class SummarizeRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "text": "Hello support team, I have been attempting to access my corporate account for the last three days. Every time I input my password, the screen displays Error 503 Service Unavailable. I have already cleared cache and cookies, reset my network settings, and tried two different browsers without any success. Please help me regain access as this is blocking critical work.",
+                "text": (
+                    "Hello support team, I have been attempting to access my corporate account "
+                    "for the last three days. Every time I input my password, the screen displays "
+                    "Error 503 Service Unavailable. I have already cleared cache and cookies, "
+                    "reset my network settings, and tried two different browsers without any success. "
+                    "Please help me regain access as this is blocking critical work."
+                ),
                 "max_length": 50,
             }
         }
@@ -38,7 +44,10 @@ class SummarizeResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "summary": "User unable to access corporate account for three days due to persistent Error 503 across multiple browsers.",
+                "summary": (
+                    "User unable to access corporate account for three days due to "
+                    "persistent Error 503 across multiple browsers."
+                ),
                 "key_points": [
                     "Account access blocked by Error 503 for 3 days",
                     "Troubleshooting steps (cache clearing, browser change) failed",

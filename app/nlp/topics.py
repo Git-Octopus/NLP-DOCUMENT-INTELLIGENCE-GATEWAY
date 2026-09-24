@@ -83,7 +83,9 @@ def load_topics_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     if _TOPICS_CACHE is not None and config_path is None:
         return _TOPICS_CACHE
 
-    target_path = config_path or settings.TOPICS_CONFIG_PATH
+    target_path = config_path or getattr(
+        settings, "TOPICS_CONFIG_PATH", "config/topics.yaml"
+    )
     if not os.path.isabs(target_path):
         candidate = Path(__file__).resolve().parent.parent.parent / target_path
         if candidate.exists():
@@ -185,6 +187,21 @@ def seed_topics_to_vector_store() -> int:
 
 
 _topics_seeded: bool = False
+
+
+def reseed_topics_for_active_model() -> int:
+    """
+    Recreates Qdrant collections with the active embedding model's dimensions
+    and resets topic anchor points to be lazily seeded on next query.
+    """
+    global _topics_seeded
+    from app.nlp.embeddings import get_active_embedding_dimension
+    from app.nlp.vector_store import recreate_collections_for_dimension
+
+    dim = get_active_embedding_dimension()
+    recreate_collections_for_dimension(dim)
+    _topics_seeded = False
+    return 0
 
 
 def ensure_topics_seeded() -> int:
